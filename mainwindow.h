@@ -24,6 +24,8 @@ private slots:
     void calculateTrajectory();
     void exportToCSV();
     void onUnitChanged(int index);
+    void saveProfile();
+    void loadProfile();
 
 private:
     Ui::MainWindow *ui;
@@ -35,5 +37,7 @@ private:
     double convertToMetric(double value, const QString &unitType);
     double convertFromMetric(double value, const QString &unitType);
     void updateUnitLabels();
+    void saveProfileToJson(const QString &fileName);
+    void loadProfileFromJson(const QString &fileName);
 };
 #endif // MAINWINDOW_H

@@ -12,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->calculateButton, &QPushButton::clicked, this, &MainWindow::calculateTrajectory);
     connect(ui->exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
     connect(ui->unitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onUnitChanged);
+    connect(ui->saveProfileButton, &QPushButton::clicked, this, &MainWindow::saveProfile);
+    connect(ui->loadProfileButton, &QPushButton::clicked, this, &MainWindow::loadProfile);
 
     updateUnitLabels();
 }
@@ -29,15 +31,19 @@ void MainWindow::onUnitChanged(int index) {
 
 void MainWindow::updateUnitLabels() {
     if (useMetricUnits) {
-        ui->massEdit->setPlaceholderText("kg");
-        ui->diameterEdit->setPlaceholderText("m");
-        ui->muzzleVelocityEdit->setPlaceholderText("m/s");
-        ui->windSpeedEdit->setPlaceholderText("m/s");
+        ui->massLabel->setText("Mass (kg):");
+        ui->diameterLabel->setText("Diameter (m):");
+        ui->muzzleVelocityLabel->setText("Muzzle Velocity (m/s):");
+        ui->windSpeedLabel->setText("Wind Speed (m/s):");
+        ui->plot->xAxis->setLabel("Range (m)");
+        ui->plot->yAxis->setLabel("Height (m)");
     } else {
-        ui->massEdit->setPlaceholderText("lb");
-        ui->diameterEdit->setPlaceholderText("in");
-        ui->muzzleVelocityEdit->setPlaceholderText("ft/s");
-        ui->windSpeedEdit->setPlaceholderText("ft/s");
+        ui->massLabel->setText("Mass (lb):");
+        ui->diameterLabel->setText("Diameter (in):");
+        ui->muzzleVelocityLabel->setText("Muzzle Velocity (ft/s):");
+        ui->windSpeedLabel->setText("Wind Speed (ft/s):");
+        ui->plot->xAxis->setLabel("Range (ft)");
+        ui->plot->yAxis->setLabel("Height (ft)");
     }
 }
 
@@ -112,4 +118,63 @@ void MainWindow::exportToCSV() {
         out << state.time << "," << range << "," << height << "\n";
     }
     file.close();
+}
+
+void MainWindow::saveProfile() {
+    QString fileName = QFileDialog::getSaveFileName(this, "Save Profile", "", "JSON Files (*.json)");
+    if (fileName.isEmpty()) return;
+    saveProfileToJson(fileName);
+}
+
+void MainWindow::loadProfile() {
+    QString fileName = QFileDialog::getOpenFileName(this, "Load Profile", "", "JSON Files (*.json)");
+    if (fileName.isEmpty()) return;
+    loadProfileFromJson(fileName);
+}
+
+void MainWindow::saveProfileToJson(const QString &fileName) {
+    QJsonObject profile;
+    profile["mass"] = ui->massEdit->text();
+    profile["diameter"] = ui->diameterEdit->text();
+    profile["dragCoeff"] = ui->dragCoeffEdit->text();
+    profile["muzzleVelocity"] = ui->muzzleVelocityEdit->text();
+    profile["launchAngle"] = ui->launchAngleEdit->text();
+    profile["windSpeed"] = ui->windSpeedEdit->text();
+    profile["windDirection"] = ui->windDirectionEdit->text();
+    profile["latitude"] = ui->latitudeEdit->text();
+    profile["unitSystem"] = ui->unitComboBox->currentIndex();
+
+    QJsonDocument doc(profile);
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly)) {
+        QMessageBox::warning(this, "Error", "Could not save profile.");
+        return;
+    }
+    file.write(doc.toJson());
+    file.close();
+}
+
+void MainWindow::loadProfileFromJson(const QString &fileName) {
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, "Error", "Could not load profile.");
+        return;
+    }
+    QByteArray data = file.readAll();
+    file.close();
+
+    QJsonDocument doc(QJsonDocument::fromJson(data));
+    QJsonObject profile = doc.object();
+
+    ui->massEdit->setText(profile["mass"].toString());
+    ui->diameterEdit->setText(profile["diameter"].toString());
+    ui->dragCoeffEdit->setText(profile["dragCoeff"].toString());
+    ui->muzzleVelocityEdit->setText(profile["muzzleVelocity"].toString());
+    ui->launchAngleEdit->setText(profile["launchAngle"].toString());
+    ui->windSpeedEdit->setText(profile["windSpeed"].toString());
+    ui->windDirectionEdit->setText(profile["windDirection"].toString());
+    ui->latitudeEdit->setText(profile["latitude"].toString());
+    ui->unitComboBox->setCurrentIndex(profile["unitSystem"].toInt());
+
+    onUnitChanged(ui->unitComboBox->currentIndex());
 }
