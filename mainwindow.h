@@ -4,7 +4,7 @@
 #include <QMainWindow>
 
 #include "ui_mainwindow.h"
-#include "ballistics.h"
+#include "bulletdata.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -39,12 +39,15 @@ private slots:
     void saveProfile();
     void loadProfile();
     void onAlgorithmChanged(int index);
+    void onBulletSelected(int index);
+    void loadBulletDataFile();
 
 private:
     Ui::MainWindow *ui;
     BallisticsModel *ballisticsModel;
     bool useMetricUnits;
     BallisticsAlgorithm currentAlgorithm;
+    std::vector<Bullet> bulletDatabase;
 
 private:
     void plotTrajectory(const std::vector<std::array<double, 3>>& trajectory);
@@ -53,5 +56,7 @@ private:
     void updateUnitLabels();
     void saveProfileToJson(const QString &fileName);
     void loadProfileFromJson(const QString &fileName);
+    void populateBulletComboBox();
+    double getDragCoefficient(const Bullet &bullet, double velocity, const QString &model);
 };
 #endif // MAINWINDOW_H

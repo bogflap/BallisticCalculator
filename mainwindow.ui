@@ -33,6 +33,16 @@
      <widget class="QComboBox" name="algorithmComboBox"/>
     </item>
     <item>
+     <widget class="QPushButton" name="loadBulletDataButton">
+      <property name="text">
+       <string>Load Data Button</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QComboBox" name="bulletComboBox"/>
+    </item>
+    <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QLabel" name="massLabel">

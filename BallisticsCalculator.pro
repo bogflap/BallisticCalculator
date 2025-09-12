@@ -1,4 +1,4 @@
-QT       += core gui printsupport
+QT       += core gui printsupport network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -10,6 +10,7 @@ CONFIG += c++17
 
 SOURCES += \
     ballistics.cpp \
+    bulletdata.cpp \
     dof3.cpp \
     dof6.cpp \
     main.cpp \
@@ -24,6 +25,7 @@ SOURCES += \
 HEADERS += \
     ballistics.h \
     ballisticsmodel.h \
+    bulletdata.h \
     dof3.h \
     dof6.h \
     mainwindow.h \

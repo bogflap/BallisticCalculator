@@ -1,0 +1,434 @@
+{
+  "bullets": [
+    {
+      "caliber": ".308 Winchester (7.62x51mm NATO)",
+      "manufacturer": "Hornady",
+      "model": "Match 168gr HPBT (ELD Match)",
+      "weight_gr": 168,
+      "weight_g": 10.89,
+      "diameter_in": 0.308,
+      "diameter_mm": 7.82,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.475,
+          "transonic": 0.490,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.450 },
+            { "velocity": 2800, "cd": 0.460 },
+            { "velocity": 2600, "cd": 0.470 },
+            { "velocity": 2400, "cd": 0.480 },
+            { "velocity": 2200, "cd": 0.490 },
+            { "velocity": 2000, "cd": 0.500 },
+            { "velocity": 1800, "cd": 0.510 },
+            { "velocity": 1600, "cd": 0.520 },
+            { "velocity": 1400, "cd": 0.530 },
+            { "velocity": 1200, "cd": 0.540 }
+          ]
+        },
+        "G7": {
+          "bc": 0.270,
+          "subsonic": 0.230,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.250 },
+            { "velocity": 2800, "cd": 0.255 },
+            { "velocity": 2600, "cd": 0.260 },
+            { "velocity": 2400, "cd": 0.265 },
+            { "velocity": 2200, "cd": 0.270 },
+            { "velocity": 2000, "cd": 0.275 },
+            { "velocity": 1800, "cd": 0.280 },
+            { "velocity": 1600, "cd": 0.285 },
+            { "velocity": 1400, "cd": 0.290 },
+            { "velocity": 1200, "cd": 0.295 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".308 Winchester (7.62x51mm NATO)",
+      "manufacturer": "Sierra",
+      "model": "MatchKing 175gr HPBT",
+      "weight_gr": 175,
+      "weight_g": 11.34,
+      "diameter_in": 0.308,
+      "diameter_mm": 7.82,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.500,
+          "transonic": 0.520,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.470 },
+            { "velocity": 2800, "cd": 0.480 },
+            { "velocity": 2600, "cd": 0.490 },
+            { "velocity": 2400, "cd": 0.500 },
+            { "velocity": 2200, "cd": 0.510 },
+            { "velocity": 2000, "cd": 0.520 },
+            { "velocity": 1800, "cd": 0.530 },
+            { "velocity": 1600, "cd": 0.540 },
+            { "velocity": 1400, "cd": 0.550 },
+            { "velocity": 1200, "cd": 0.560 }
+          ]
+        },
+        "G7": {
+          "bc": 0.285,
+          "subsonic": 0.240,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.260 },
+            { "velocity": 2800, "cd": 0.265 },
+            { "velocity": 2600, "cd": 0.270 },
+            { "velocity": 2400, "cd": 0.275 },
+            { "velocity": 2200, "cd": 0.280 },
+            { "velocity": 2000, "cd": 0.285 },
+            { "velocity": 1800, "cd": 0.290 },
+            { "velocity": 1600, "cd": 0.295 },
+            { "velocity": 1400, "cd": 0.300 },
+            { "velocity": 1200, "cd": 0.305 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".308 Winchester (7.62x51mm NATO)",
+      "manufacturer": "Lapua",
+      "model": "Scenar 167gr HPBT",
+      "weight_gr": 167,
+      "weight_g": 10.82,
+      "diameter_in": 0.308,
+      "diameter_mm": 7.82,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.480,
+          "transonic": 0.495,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.455 },
+            { "velocity": 2800, "cd": 0.465 },
+            { "velocity": 2600, "cd": 0.475 },
+            { "velocity": 2400, "cd": 0.485 },
+            { "velocity": 2200, "cd": 0.495 },
+            { "velocity": 2000, "cd": 0.505 },
+            { "velocity": 1800, "cd": 0.515 },
+            { "velocity": 1600, "cd": 0.525 },
+            { "velocity": 1400, "cd": 0.535 },
+            { "velocity": 1200, "cd": 0.545 }
+          ]
+        },
+        "G7": {
+          "bc": 0.275,
+          "subsonic": 0.235,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.255 },
+            { "velocity": 2800, "cd": 0.260 },
+            { "velocity": 2600, "cd": 0.265 },
+            { "velocity": 2400, "cd": 0.270 },
+            { "velocity": 2200, "cd": 0.275 },
+            { "velocity": 2000, "cd": 0.280 },
+            { "velocity": 1800, "cd": 0.285 },
+            { "velocity": 1600, "cd": 0.290 },
+            { "velocity": 1400, "cd": 0.295 },
+            { "velocity": 1200, "cd": 0.300 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".308 Winchester (7.62x51mm NATO)",
+      "manufacturer": "Nosler",
+      "model": "Custom Competition 175gr HPBT",
+      "weight_gr": 175,
+      "weight_g": 11.34,
+      "diameter_in": 0.308,
+      "diameter_mm": 7.82,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.505,
+          "transonic": 0.525,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.475 },
+            { "velocity": 2800, "cd": 0.485 },
+            { "velocity": 2600, "cd": 0.495 },
+            { "velocity": 2400, "cd": 0.505 },
+            { "velocity": 2200, "cd": 0.515 },
+            { "velocity": 2000, "cd": 0.525 },
+            { "velocity": 1800, "cd": 0.535 },
+            { "velocity": 1600, "cd": 0.545 },
+            { "velocity": 1400, "cd": 0.555 },
+            { "velocity": 1200, "cd": 0.565 }
+          ]
+        },
+        "G7": {
+          "bc": 0.290,
+          "subsonic": 0.245,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.265 },
+            { "velocity": 2800, "cd": 0.270 },
+            { "velocity": 2600, "cd": 0.275 },
+            { "velocity": 2400, "cd": 0.280 },
+            { "velocity": 2200, "cd": 0.285 },
+            { "velocity": 2000, "cd": 0.290 },
+            { "velocity": 1800, "cd": 0.295 },
+            { "velocity": 1600, "cd": 0.300 },
+            { "velocity": 1400, "cd": 0.305 },
+            { "velocity": 1200, "cd": 0.310 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".308 Winchester (7.62x51mm NATO)",
+      "manufacturer": "Federal",
+      "model": "Gold Medal Match 168gr BTHP",
+      "weight_gr": 168,
+      "weight_g": 10.89,
+      "diameter_in": 0.308,
+      "diameter_mm": 7.82,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.480,
+          "transonic": 0.495,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.450 },
+            { "velocity": 2800, "cd": 0.460 },
+            { "velocity": 2600, "cd": 0.470 },
+            { "velocity": 2400, "cd": 0.480 },
+            { "velocity": 2200, "cd": 0.490 },
+            { "velocity": 2000, "cd": 0.500 },
+            { "velocity": 1800, "cd": 0.510 },
+            { "velocity": 1600, "cd": 0.520 },
+            { "velocity": 1400, "cd": 0.530 },
+            { "velocity": 1200, "cd": 0.540 }
+          ]
+        },
+        "G7": {
+          "bc": 0.270,
+          "subsonic": 0.230,
+          "supersonic": [
+            { "velocity": 3000, "cd": 0.250 },
+            { "velocity": 2800, "cd": 0.255 },
+            { "velocity": 2600, "cd": 0.260 },
+            { "velocity": 2400, "cd": 0.265 },
+            { "velocity": 2200, "cd": 0.270 },
+            { "velocity": 2000, "cd": 0.275 },
+            { "velocity": 1800, "cd": 0.280 },
+            { "velocity": 1600, "cd": 0.285 },
+            { "velocity": 1400, "cd": 0.290 },
+            { "velocity": 1200, "cd": 0.295 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".243 Winchester",
+      "manufacturer": "Hornady",
+      "model": "Match 105gr HPBT (ELD Match)",
+      "weight_gr": 105,
+      "weight_g": 6.80,
+      "diameter_in": 0.243,
+      "diameter_mm": 6.17,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.380,
+          "transonic": 0.395,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.350 },
+            { "velocity": 3300, "cd": 0.360 },
+            { "velocity": 3100, "cd": 0.370 },
+            { "velocity": 2900, "cd": 0.380 },
+            { "velocity": 2700, "cd": 0.390 },
+            { "velocity": 2500, "cd": 0.400 },
+            { "velocity": 2300, "cd": 0.410 },
+            { "velocity": 2100, "cd": 0.420 },
+            { "velocity": 1900, "cd": 0.430 },
+            { "velocity": 1700, "cd": 0.440 }
+          ]
+        },
+        "G7": {
+          "bc": 0.230,
+          "subsonic": 0.200,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.210 },
+            { "velocity": 3300, "cd": 0.215 },
+            { "velocity": 3100, "cd": 0.220 },
+            { "velocity": 2900, "cd": 0.225 },
+            { "velocity": 2700, "cd": 0.230 },
+            { "velocity": 2500, "cd": 0.235 },
+            { "velocity": 2300, "cd": 0.240 },
+            { "velocity": 2100, "cd": 0.245 },
+            { "velocity": 1900, "cd": 0.250 },
+            { "velocity": 1700, "cd": 0.255 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".243 Winchester",
+      "manufacturer": "Sierra",
+      "model": "MatchKing 107gr HPBT",
+      "weight_gr": 107,
+      "weight_g": 6.91,
+      "diameter_in": 0.243,
+      "diameter_mm": 6.17,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.390,
+          "transonic": 0.405,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.360 },
+            { "velocity": 3300, "cd": 0.370 },
+            { "velocity": 3100, "cd": 0.380 },
+            { "velocity": 2900, "cd": 0.390 },
+            { "velocity": 2700, "cd": 0.400 },
+            { "velocity": 2500, "cd": 0.410 },
+            { "velocity": 2300, "cd": 0.420 },
+            { "velocity": 2100, "cd": 0.430 },
+            { "velocity": 1900, "cd": 0.440 },
+            { "velocity": 1700, "cd": 0.450 }
+          ]
+        },
+        "G7": {
+          "bc": 0.235,
+          "subsonic": 0.205,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.215 },
+            { "velocity": 3300, "cd": 0.220 },
+            { "velocity": 3100, "cd": 0.225 },
+            { "velocity": 2900, "cd": 0.230 },
+            { "velocity": 2700, "cd": 0.235 },
+            { "velocity": 2500, "cd": 0.240 },
+            { "velocity": 2300, "cd": 0.245 },
+            { "velocity": 2100, "cd": 0.250 },
+            { "velocity": 1900, "cd": 0.255 },
+            { "velocity": 1700, "cd": 0.260 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".243 Winchester",
+      "manufacturer": "Lapua",
+      "model": "Scenar 105gr HPBT",
+      "weight_gr": 105,
+      "weight_g": 6.80,
+      "diameter_in": 0.243,
+      "diameter_mm": 6.17,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.385,
+          "transonic": 0.400,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.355 },
+            { "velocity": 3300, "cd": 0.365 },
+            { "velocity": 3100, "cd": 0.375 },
+            { "velocity": 2900, "cd": 0.385 },
+            { "velocity": 2700, "cd": 0.395 },
+            { "velocity": 2500, "cd": 0.405 },
+            { "velocity": 2300, "cd": 0.415 },
+            { "velocity": 2100, "cd": 0.425 },
+            { "velocity": 1900, "cd": 0.435 },
+            { "velocity": 1700, "cd": 0.445 }
+          ]
+        },
+        "G7": {
+          "bc": 0.232,
+          "subsonic": 0.202,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.212 },
+            { "velocity": 3300, "cd": 0.217 },
+            { "velocity": 3100, "cd": 0.222 },
+            { "velocity": 2900, "cd": 0.227 },
+            { "velocity": 2700, "cd": 0.232 },
+            { "velocity": 2500, "cd": 0.237 },
+            { "velocity": 2300, "cd": 0.242 },
+            { "velocity": 2100, "cd": 0.247 },
+            { "velocity": 1900, "cd": 0.252 },
+            { "velocity": 1700, "cd": 0.257 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".243 Winchester",
+      "manufacturer": "Nosler",
+      "model": "Custom Competition 105gr HPBT",
+      "weight_gr": 105,
+      "weight_g": 6.80,
+      "diameter_in": 0.243,
+      "diameter_mm": 6.17,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.390,
+          "transonic": 0.405,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.360 },
+            { "velocity": 3300, "cd": 0.370 },
+            { "velocity": 3100, "cd": 0.380 },
+            { "velocity": 2900, "cd": 0.390 },
+            { "velocity": 2700, "cd": 0.400 },
+            { "velocity": 2500, "cd": 0.410 },
+            { "velocity": 2300, "cd": 0.420 },
+            { "velocity": 2100, "cd": 0.430 },
+            { "velocity": 1900, "cd": 0.440 },
+            { "velocity": 1700, "cd": 0.450 }
+          ]
+        },
+        "G7": {
+          "bc": 0.235,
+          "subsonic": 0.205,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.215 },
+            { "velocity": 3300, "cd": 0.220 },
+            { "velocity": 3100, "cd": 0.225 },
+            { "velocity": 2900, "cd": 0.230 },
+            { "velocity": 2700, "cd": 0.235 },
+            { "velocity": 2500, "cd": 0.240 },
+            { "velocity": 2300, "cd": 0.245 },
+            { "velocity": 2100, "cd": 0.250 },
+            { "velocity": 1900, "cd": 0.255 },
+            { "velocity": 1700, "cd": 0.260 }
+          ]
+        }
+      }
+    },
+    {
+      "caliber": ".243 Winchester",
+      "manufacturer": "Federal",
+      "model": "Gold Medal Match 105gr BTHP",
+      "weight_gr": 105,
+      "weight_g": 6.80,
+      "diameter_in": 0.243,
+      "diameter_mm": 6.17,
+      "drag_coefficients": {
+        "G1": {
+          "subsonic": 0.380,
+          "transonic": 0.395,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.350 },
+            { "velocity": 3300, "cd": 0.360 },
+            { "velocity": 3100, "cd": 0.370 },
+            { "velocity": 2900, "cd": 0.380 },
+            { "velocity": 2700, "cd": 0.390 },
+            { "velocity": 2500, "cd": 0.400 },
+            { "velocity": 2300, "cd": 0.410 },
+            { "velocity": 2100, "cd": 0.420 },
+            { "velocity": 1900, "cd": 0.430 },
+            { "velocity": 1700, "cd": 0.440 }
+          ]
+        },
+        "G7": {
+          "bc": 0.230,
+          "subsonic": 0.200,
+          "supersonic": [
+            { "velocity": 3500, "cd": 0.210 },
+            { "velocity": 3300, "cd": 0.215 },
+            { "velocity": 3100, "cd": 0.220 },
+            { "velocity": 2900, "cd": 0.225 },
+            { "velocity": 2700, "cd": 0.230 },
+            { "velocity": 2500, "cd": 0.235 },
+            { "velocity": 2300, "cd": 0.240 },
+            { "velocity": 2100, "cd": 0.245 },
+            { "velocity": 1900, "cd": 0.250 },
+            { "velocity": 1700, "cd": 0.255 }
+          ]
+        }
+      }
+    }
+  ]
+}

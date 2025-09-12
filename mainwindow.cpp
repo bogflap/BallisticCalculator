@@ -32,6 +32,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->saveProfileButton, &QPushButton::clicked, this, &MainWindow::saveProfile);
     connect(ui->loadProfileButton, &QPushButton::clicked, this, &MainWindow::loadProfile);
     connect(ui->algorithmComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onAlgorithmChanged);
+    connect(ui->bulletComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onBulletSelected);
+    connect(ui->loadBulletDataButton, &QPushButton::clicked, this, &MainWindow::loadBulletDataFile);
 
     updateUnitLabels();
 }
@@ -39,6 +41,76 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::loadBulletDataFile() {
+    QString filePath = QFileDialog::getOpenFileName(
+        this,
+        "Open Bullet Data File",
+        QDir::homePath(),
+        "JSON Files (*.json)"
+        );
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    bulletDatabase = BulletData::loadBulletData(filePath);
+    if (bulletDatabase.empty()) {
+        QMessageBox::warning(this, "Error", "Failed to load bullet data.");
+        return;
+    }
+
+    populateBulletComboBox();
+    QMessageBox::information(this, "Success", "Bullet data loaded successfully.");
+}
+void MainWindow::populateBulletComboBox() {
+    ui->bulletComboBox->clear();
+    for (const Bullet &bullet : bulletDatabase) {
+        QString bulletInfo = QString("%1 %2 %3gr")
+        .arg(bullet.manufacturer)
+            .arg(bullet.model)
+            .arg(bullet.weight_gr);
+        ui->bulletComboBox->addItem(bulletInfo, QVariant::fromValue(bullet));
+    }
+}
+
+void MainWindow::onBulletSelected(int index) {
+    // Check if the index is valid
+    if (index < 0 || index >= static_cast<int>(bulletDatabase.size())) {
+        return;
+    }
+
+    // Get the selected bullet
+    Bullet selectedBullet = bulletDatabase[index];
+
+    // Update the UI with the selected bullet's data
+    ui->massEdit->setText(QString::number(convertFromMetric(selectedBullet.weight_g / 1000.0, "mass")));
+    ui->diameterEdit->setText(QString::number(convertFromMetric(selectedBullet.diameter_mm / 1000.0, "length")));
+}
+
+double MainWindow::getDragCoefficient(const Bullet &bullet, double velocity, const QString &model) {
+    QVariantMap dragData = bullet.drag_coefficients.value(model).toMap();
+    if (dragData.isEmpty()) return 0.5; // Default value
+
+    QVariantList supersonicData = dragData["supersonic"].toList();
+    if (supersonicData.isEmpty()) return dragData["bc"].toDouble();
+
+    // Find the closest velocity range
+    double closestCd = supersonicData[0].toMap()["cd"].toDouble();
+    double minDiff = std::abs(supersonicData[0].toMap()["velocity"].toDouble() - velocity);
+
+    for (const QVariant &entry : supersonicData) {
+        QVariantMap data = entry.toMap();
+        double entryVelocity = data["velocity"].toDouble();
+        double diff = std::abs(entryVelocity - velocity);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestCd = data["cd"].toDouble();
+        }
+    }
+
+    return closestCd;
 }
 
 void MainWindow::onAlgorithmChanged(int index) {
@@ -85,6 +157,19 @@ double MainWindow::convertFromMetric(double value, const QString &unitType) {
 }
 
 void MainWindow::calculateTrajectory() {
+    int comboIndex = ui->bulletComboBox->currentIndex();
+    if (comboIndex < 0) {
+        QMessageBox::warning(this, "Error", "Please select a bullet profile.");
+        return;
+    }
+
+    size_t bulletIndex = static_cast<size_t>(comboIndex);
+    if (bulletIndex >= bulletDatabase.size()) {
+        QMessageBox::warning(this, "Error", "Please select a bullet profile.");
+        return;
+    }
+
+    Bullet selectedBullet = bulletDatabase[bulletIndex];
     double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
     double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
     double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
@@ -92,7 +177,9 @@ void MainWindow::calculateTrajectory() {
     double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "velocity");
     double windDirection = ui->windDirectionEdit->text().toDouble();
     double latitude = ui->latitudeEdit->text().toDouble();
-    double dragCoeff = ui->dragCoeffEdit->text().toDouble();
+
+    // Get drag coefficient based on selected model
+    double dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
 
     delete ballisticsModel;
     switch (currentAlgorithm) {
@@ -126,7 +213,6 @@ void MainWindow::calculateTrajectory() {
         ballisticsModel->step(dt);
     }
 
-    // Plot the trajectory
     plotTrajectory(ballisticsModel->getTrajectory());
 }
 
