@@ -10,14 +10,29 @@ CONFIG += c++17
 
 SOURCES += \
     ballistics.cpp \
+    dof3.cpp \
+    dof6.cpp \
     main.cpp \
     mainwindow.cpp \
-    qcustomplot.cpp
+    modifiedeuler.cpp \
+    modifiedpointmass.cpp \
+    pejsa.cpp \
+    qcustomplot.cpp \
+    rungekutta.cpp \
+    siacci.cpp
 
 HEADERS += \
     ballistics.h \
+    ballisticsmodel.h \
+    dof3.h \
+    dof6.h \
     mainwindow.h \
-    qcustomplot.h
+    modifiedeuler.h \
+    modifiedpointmass.h \
+    pejsa.h \
+    qcustomplot.h \
+    rungekutta.h \
+    siacci.h
 
 FORMS += \
     mainwindow.ui

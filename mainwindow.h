@@ -12,6 +12,18 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
+enum class BallisticsAlgorithm {
+    DOF3,
+    DOF6,
+    ModifiedPointMass,
+    RungeKutta,
+    ModifiedEuler,
+    Siacci,
+    Pejsa
+};
+
+class BallisticsModel; // Forward declaration
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -26,14 +38,16 @@ private slots:
     void onUnitChanged(int index);
     void saveProfile();
     void loadProfile();
+    void onAlgorithmChanged(int index);
 
 private:
     Ui::MainWindow *ui;
-    Ballistics6DOF *ballistics;
+    BallisticsModel *ballisticsModel;
     bool useMetricUnits;
+    BallisticsAlgorithm currentAlgorithm;
 
 private:
-    void plotTrajectory(const std::vector<State>& trajectory);
+    void plotTrajectory(const std::vector<std::array<double, 3>>& trajectory);
     double convertToMetric(double value, const QString &unitType);
     double convertFromMetric(double value, const QString &unitType);
     void updateUnitLabels();

@@ -1,6 +1,14 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "dof3.h"
+#include "dof6.h"
+#include "modifiedpointmass.h"
+#include "rungekutta.h"
+#include "siacci.h"
+#include "pejsa.h"
+#include "modifiedeuler.h"
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -8,12 +16,22 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Populate algorithm combo box
+    ui->algorithmComboBox->addItem("3DOF", QVariant::fromValue(BallisticsAlgorithm::DOF3));
+    ui->algorithmComboBox->addItem("6DOF", QVariant::fromValue(BallisticsAlgorithm::DOF6));
+    ui->algorithmComboBox->addItem("Modified Point Mass", QVariant::fromValue(BallisticsAlgorithm::ModifiedPointMass));
+    ui->algorithmComboBox->addItem("Runge-Kutta", QVariant::fromValue(BallisticsAlgorithm::RungeKutta));
+    ui->algorithmComboBox->addItem("Modified Euler", QVariant::fromValue(BallisticsAlgorithm::ModifiedEuler));
+    ui->algorithmComboBox->addItem("Siacci", QVariant::fromValue(BallisticsAlgorithm::Siacci));
+    ui->algorithmComboBox->addItem("Pejsa", QVariant::fromValue(BallisticsAlgorithm::Pejsa));
+
     // Connect signals and slots
     connect(ui->calculateButton, &QPushButton::clicked, this, &MainWindow::calculateTrajectory);
     connect(ui->exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
     connect(ui->unitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onUnitChanged);
     connect(ui->saveProfileButton, &QPushButton::clicked, this, &MainWindow::saveProfile);
     connect(ui->loadProfileButton, &QPushButton::clicked, this, &MainWindow::loadProfile);
+    connect(ui->algorithmComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onAlgorithmChanged);
 
     updateUnitLabels();
 }
@@ -21,7 +39,10 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
-    delete ballistics;
+}
+
+void MainWindow::onAlgorithmChanged(int index) {
+    currentAlgorithm = ui->algorithmComboBox->itemData(index).value<BallisticsAlgorithm>();
 }
 
 void MainWindow::onUnitChanged(int index) {
@@ -73,51 +94,152 @@ void MainWindow::calculateTrajectory() {
     double latitude = ui->latitudeEdit->text().toDouble();
     double dragCoeff = ui->dragCoeffEdit->text().toDouble();
 
-    delete ballistics;
-    ballistics = new Ballistics6DOF(mass, diameter, dragCoeff, muzzleVelocity, launchAngle, windSpeed, windDirection, latitude);
+    delete ballisticsModel;
+    switch (currentAlgorithm) {
+    case BallisticsAlgorithm::DOF3:
+        ballisticsModel = new DOF3();
+        break;
+    case BallisticsAlgorithm::DOF6:
+        ballisticsModel = new DOF6();
+        break;
+    case BallisticsAlgorithm::ModifiedPointMass:
+        ballisticsModel = new ModifiedPointMass();
+        break;
+    case BallisticsAlgorithm::RungeKutta:
+        ballisticsModel = new RungeKutta();
+        break;
+    case BallisticsAlgorithm::ModifiedEuler:
+        ballisticsModel = new ModifiedEuler();
+        break;
+    case BallisticsAlgorithm::Siacci:
+        ballisticsModel = new Siacci();
+        break;
+    case BallisticsAlgorithm::Pejsa:
+        ballisticsModel = new Pejsa();
+        break;
+    }
 
-    ballistics->clearTrajectory();
+    ballisticsModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle, windSpeed, windDirection, latitude);
+
     double dt = 0.01;
     for (int i = 0; i < 1000; ++i) {
-        ballistics->step(dt);
+        ballisticsModel->step(dt);
     }
-    plotTrajectory(ballistics->getTrajectory());
+
+    // Plot the trajectory
+    plotTrajectory(ballisticsModel->getTrajectory());
 }
 
-void MainWindow::plotTrajectory(const std::vector<State>& trajectory) {
+void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajectory) {
     QVector<double> x, y;
-    for (const auto& state : trajectory) {
-        x << state.x;
-        y << state.y;
+    for (const auto& point : trajectory) {
+        x << point[0]; // x-coordinate
+        y << point[1]; // y-coordinate
     }
+
     ui->plot->clearGraphs();
     ui->plot->addGraph();
     ui->plot->graph(0)->setData(x, y);
-    ui->plot->xAxis->setLabel(useMetricUnits ? "Range (m)" : "Range (ft)");
-    ui->plot->yAxis->setLabel(useMetricUnits ? "Height (m)" : "Height (ft)");
+
+    // Set axis labels based on unit system
+    if (useMetricUnits) {
+        ui->plot->xAxis->setLabel("Range (m)");
+        ui->plot->yAxis->setLabel("Height (m)");
+    } else {
+        ui->plot->xAxis->setLabel("Range (ft)");
+        ui->plot->yAxis->setLabel("Height (ft)");
+    }
+
     ui->plot->rescaleAxes();
     ui->plot->replot();
 }
 
 void MainWindow::exportToCSV() {
-    QString fileName = QFileDialog::getSaveFileName(this, "Save File", "", "CSV Files (*.csv)");
-    if (fileName.isEmpty()) return;
+    QString fileName = QFileDialog::getSaveFileName(
+        this,
+        "Save Trajectory Data",
+        "",
+        "CSV Files (*.csv)"
+        );
+    if (fileName.isEmpty()) {
+        return;
+    }
 
     QFile file(fileName);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Error", "Could not open file for writing.");
+        return;
+    }
 
     QTextStream out(&file);
+
+    // Write header with metadata
+    out << "# Ballistic Trajectory Data\n";
+    out << "# Algorithm: ";
+    switch (currentAlgorithm) {
+    case BallisticsAlgorithm::DOF3: out << "3DOF\n"; break;
+    case BallisticsAlgorithm::DOF6: out << "6DOF\n"; break;
+    case BallisticsAlgorithm::ModifiedPointMass: out << "Modified Point Mass\n"; break;
+    case BallisticsAlgorithm::RungeKutta: out << "Runge-Kutta\n"; break;
+    case BallisticsAlgorithm::ModifiedEuler: out << "Modified Euler\n"; break;
+    case BallisticsAlgorithm::Siacci: out << "Siacci\n"; break;
+    case BallisticsAlgorithm::Pejsa: out << "Pejsa\n"; break;
+    }
+    out << "# Unit System: " << (useMetricUnits ? "Metric" : "Imperial") << "\n";
+    out << "# Parameters:\n";
+    out << "# Mass: " << (useMetricUnits ? ui->massEdit->text() + " kg" : QString::number(ui->massEdit->text().toDouble() * 2.20462) + " lb") << "\n";
+    out << "# Diameter: " << (useMetricUnits ? ui->diameterEdit->text() + " m" : QString::number(ui->diameterEdit->text().toDouble() * 39.3701) + " in") << "\n";
+    out << "# Muzzle Velocity: " << (useMetricUnits ? ui->muzzleVelocityEdit->text() + " m/s" : QString::number(ui->muzzleVelocityEdit->text().toDouble() * 3.28084) + " ft/s") << "\n";
+    out << "# Launch Angle: " << ui->launchAngleEdit->text() << " rad\n";
+    out << "# Wind Speed: " << (useMetricUnits ? ui->windSpeedEdit->text() + " m/s" : QString::number(ui->windSpeedEdit->text().toDouble() * 3.28084) + " ft/s") << "\n";
+    out << "# Wind Direction: " << ui->windDirectionEdit->text() << " rad\n";
+    out << "# Latitude: " << ui->latitudeEdit->text() << " rad\n";
+    out << "# Drag Coefficient: " << ui->dragCoeffEdit->text() << "\n";
+    out << "#\n";
+
+    // Write CSV header
     if (useMetricUnits) {
-        out << "Time (s),Range (m),Height (m)\n";
+        out << "Time (s),Range (m),Height (m),Velocity (m/s),Velocity X (m/s),Velocity Y (m/s)\n";
     } else {
-        out << "Time (s),Range (ft),Height (ft)\n";
+        out << "Time (s),Range (ft),Height (ft),Velocity (ft/s),Velocity X (ft/s),Velocity Y (ft/s)\n";
     }
-    for (const auto& state : ballistics->getTrajectory()) {
-        double range = useMetricUnits ? state.x : state.x / 0.3048;
-        double height = useMetricUnits ? state.y : state.y / 0.3048;
-        out << state.time << "," << range << "," << height << "\n";
+
+    // Get trajectory data
+    const auto& trajectory = ballisticsModel->getTrajectory();
+
+    // Write trajectory data
+    for (size_t i = 0; i < trajectory.size(); ++i) {
+        const auto& point = trajectory[i];
+        double x = point[0];
+        double y = point[1];
+        double t = point[2];
+
+        // Convert to imperial if needed
+        double displayX = useMetricUnits ? x : x * 3.28084;
+        double displayY = useMetricUnits ? y : y * 3.28084;
+
+        // For velocity, we need to access the model's internal state or calculate it
+        // This is a simplified approach; you may need to adjust based on your model
+        double vx = 0.0, vy = 0.0, v = 0.0;
+        if (i < trajectory.size() - 1) {
+            double dx = trajectory[i+1][0] - x;
+            double dy = trajectory[i+1][1] - y;
+            double dt = trajectory[i+1][2] - t;
+            vx = dx / dt;
+            vy = dy / dt;
+            v = sqrt(vx * vx + vy * vy);
+        }
+
+        double displayVx = useMetricUnits ? vx : vx * 3.28084;
+        double displayVy = useMetricUnits ? vy : vy * 3.28084;
+        double displayV = useMetricUnits ? v : v * 3.28084;
+
+        out << t << "," << displayX << "," << displayY << ","
+            << displayV << "," << displayVx << "," << displayVy << "\n";
     }
+
     file.close();
+    QMessageBox::information(this, "Success", "Trajectory data exported successfully.");
 }
 
 void MainWindow::saveProfile() {
