@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>966</width>
+    <height>690</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,28 +16,39 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QComboBox" name="unitComboBox">
+     <layout class="QHBoxLayout" name="horizontalLayout_12">
       <item>
-       <property name="text">
-        <string>Metric</string>
-       </property>
+       <widget class="QComboBox" name="unitComboBox">
+        <item>
+         <property name="text">
+          <string>Metric</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Imperial</string>
+         </property>
+        </item>
+       </widget>
       </item>
       <item>
-       <property name="text">
-        <string>Imperial</string>
-       </property>
+       <widget class="QPushButton" name="loadBulletDataButton">
+        <property name="text">
+         <string>Load Data Button</string>
+        </property>
+       </widget>
       </item>
-     </widget>
+      <item>
+       <widget class="QPushButton" name="calculateZeroButton">
+        <property name="text">
+         <string>Calculate Zero Angle</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item>
      <widget class="QComboBox" name="algorithmComboBox"/>
-    </item>
-    <item>
-     <widget class="QPushButton" name="loadBulletDataButton">
-      <property name="text">
-       <string>Load Data Button</string>
-      </property>
-     </widget>
     </item>
     <item>
      <widget class="QComboBox" name="bulletComboBox"/>
@@ -127,6 +138,38 @@
      </layout>
     </item>
     <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_10">
+      <item>
+       <widget class="QLabel" name="zeroRangeLabel">
+        <property name="text">
+         <string>Launch Angle</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="zeroRangeEdit"/>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_11">
+      <item>
+       <widget class="QLabel" name="zeroAngleLabel">
+        <property name="text">
+         <string>Zero Angle</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="zeroAngleValue">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
      <layout class="QHBoxLayout" name="horizontalLayout_5">
       <item>
        <widget class="QLabel" name="windSpeedLabel_2">
@@ -173,18 +216,22 @@
      </layout>
     </item>
     <item>
-     <widget class="QPushButton" name="calculateButton">
-      <property name="text">
-       <string>Calculate</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="exportButton">
-      <property name="text">
-       <string>Export</string>
-      </property>
-     </widget>
+     <layout class="QHBoxLayout" name="horizontalLayout_13">
+      <item>
+       <widget class="QPushButton" name="calculateButton">
+        <property name="text">
+         <string>Calculate</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="exportButton">
+        <property name="text">
+         <string>Export</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item>
      <widget class="QCustomPlot" name="plot" native="true"/>

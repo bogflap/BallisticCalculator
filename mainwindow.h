@@ -41,6 +41,7 @@ private slots:
     void onAlgorithmChanged(int index);
     void onBulletSelected(int index);
     void loadBulletDataFile();
+    void calculateZeroAngle();
 
 private:
     Ui::MainWindow *ui;
@@ -58,5 +59,7 @@ private:
     void loadProfileFromJson(const QString &fileName);
     void populateBulletComboBox();
     double getDragCoefficient(const Bullet &bullet, double velocity, const QString &model);
+    void calculateAndDisplayZeroAngle(double range);
+    double getDragCoefficientAtVelocity(const Bullet &bullet, double velocity, const QString &model);
 };
 #endif // MAINWINDOW_H

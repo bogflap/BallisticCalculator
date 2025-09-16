@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    ballisticsModel = nullptr;
+
     // Populate algorithm combo box
     ui->algorithmComboBox->addItem("3DOF", QVariant::fromValue(BallisticsAlgorithm::DOF3));
     ui->algorithmComboBox->addItem("6DOF", QVariant::fromValue(BallisticsAlgorithm::DOF6));
@@ -34,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->algorithmComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onAlgorithmChanged);
     connect(ui->bulletComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onBulletSelected);
     connect(ui->loadBulletDataButton, &QPushButton::clicked, this, &MainWindow::loadBulletDataFile);
+    connect(ui->calculateZeroButton, &QPushButton::clicked, this, &MainWindow::calculateZeroAngle);
 
     updateUnitLabels();
 }
@@ -41,6 +44,125 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::calculateZeroAngle() {
+    bool ok;
+    double range = ui->zeroRangeEdit->text().toDouble(&ok);
+    if (!ok || range <= 0) {
+        QMessageBox::warning(this, "Error", "Please enter a valid range.");
+        return;
+    }
+
+    // Convert range to meters if in imperial mode
+    if (!useMetricUnits) {
+        range *= 0.9144; // yards to meters
+    }
+
+    calculateAndDisplayZeroAngle(range);
+}
+
+void MainWindow::calculateAndDisplayZeroAngle(double range) {
+    int bulletIndex = ui->bulletComboBox->currentIndex();
+    if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
+        QMessageBox::warning(this, "Error", "Please select a bullet profile.");
+        return;
+    }
+
+    Bullet selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
+    double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
+    double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
+    double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
+    double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
+    double windDirection = ui->windDirectionEdit->text().toDouble();
+    double latitude = ui->latitudeEdit->text().toDouble();
+
+    // Get drag coefficient based on selected model
+    double dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
+
+    // Create a temporary ballistics model for zero angle calculation
+    BallisticsModel* zeroModel = new DOF6(); // Using 6DOF for zero angle calculation
+    zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, 0, windSpeed, windDirection, latitude);
+
+    // Binary search to find the zero angle
+    double lowAngle = -0.1; // -0.1 radians
+    double highAngle = 0.5;  // 0.5 radians (about 28.6 degrees)
+    double bestAngle = 0.0;
+    double minError = std::numeric_limits<double>::max();
+    const double tolerance = 0.0001; // 0.0001 radians tolerance
+    const int maxIterations = 100;
+
+    for (int i = 0; i < maxIterations; ++i) {
+        double midAngle1 = lowAngle + (highAngle - lowAngle) / 3.0;
+        double midAngle2 = highAngle - (highAngle - lowAngle) / 3.0;
+
+        // Test midAngle1
+        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle1, windSpeed, windDirection, latitude);
+        double dt = 0.01;
+        double currentX = 0.0;
+        double currentY = 0.0;
+        for (int step = 0; step < 5000; ++step) {
+            zeroModel->step(dt);
+            const auto& trajectory = zeroModel->getTrajectory();
+            if (!trajectory.empty()) {
+                currentX = trajectory.back()[0];
+                currentY = trajectory.back()[1];
+            }
+            if (currentX >= range) {
+                break;
+            }
+        }
+
+        double error1 = std::abs(currentY);
+
+        // Test midAngle2
+        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle2, windSpeed, windDirection, latitude);
+        currentX = 0.0;
+        currentY = 0.0;
+        for (int step = 0; step < 5000; ++step) {
+            zeroModel->step(dt);
+            const auto& trajectory = zeroModel->getTrajectory();
+            if (!trajectory.empty()) {
+                currentX = trajectory.back()[0];
+                currentY = trajectory.back()[1];
+            }
+            if (currentX >= range) {
+                break;
+            }
+        }
+
+        double error2 = std::abs(currentY);
+
+        if (error1 < minError) {
+            minError = error1;
+            bestAngle = midAngle1;
+        }
+        if (error2 < minError) {
+            minError = error2;
+            bestAngle = midAngle2;
+        }
+
+        if (error1 < error2) {
+            highAngle = midAngle2;
+        } else {
+            lowAngle = midAngle1;
+        }
+
+        if (std::abs(highAngle - lowAngle) < tolerance) {
+            break;
+        }
+    }
+
+    delete zeroModel;
+
+    // Convert angle to degrees for display
+    double zeroAngleDegrees = bestAngle * 180.0 / M_PI;
+
+    // Display the zero angle
+    ui->zeroAngleValue->setText(QString::number(zeroAngleDegrees, 'f', 2) + "°");
+
+    // Optionally set this angle as the launch angle
+    ui->launchAngleEdit->setText(QString::number(bestAngle, 'f', 4));
 }
 
 void MainWindow::loadBulletDataFile() {
@@ -64,6 +186,7 @@ void MainWindow::loadBulletDataFile() {
     populateBulletComboBox();
     QMessageBox::information(this, "Success", "Bullet data loaded successfully.");
 }
+
 void MainWindow::populateBulletComboBox() {
     ui->bulletComboBox->clear();
     for (const Bullet &bullet : bulletDatabase) {
@@ -76,41 +199,20 @@ void MainWindow::populateBulletComboBox() {
 }
 
 void MainWindow::onBulletSelected(int index) {
-    // Check if the index is valid
-    if (index < 0 || index >= static_cast<int>(bulletDatabase.size())) {
-        return;
+    if (index < 0 || static_cast<size_t>(index) >= bulletDatabase.size()) return;
+
+    Bullet selectedBullet = bulletDatabase[static_cast<size_t>(index)];
+    if (useMetricUnits) {
+        ui->massEdit->setText(QString::number(selectedBullet.weight_g, 'f', 2));
+        ui->diameterEdit->setText(QString::number(selectedBullet.diameter_mm, 'f', 2));
+    } else {
+        ui->massEdit->setText(QString::number(selectedBullet.weight_gr, 'f', 1));
+        ui->diameterEdit->setText(QString::number(selectedBullet.diameter_in, 'f', 3));
     }
-
-    // Get the selected bullet
-    Bullet selectedBullet = bulletDatabase[index];
-
-    // Update the UI with the selected bullet's data
-    ui->massEdit->setText(QString::number(convertFromMetric(selectedBullet.weight_g / 1000.0, "mass")));
-    ui->diameterEdit->setText(QString::number(convertFromMetric(selectedBullet.diameter_mm / 1000.0, "length")));
 }
 
 double MainWindow::getDragCoefficient(const Bullet &bullet, double velocity, const QString &model) {
-    QVariantMap dragData = bullet.drag_coefficients.value(model).toMap();
-    if (dragData.isEmpty()) return 0.5; // Default value
-
-    QVariantList supersonicData = dragData["supersonic"].toList();
-    if (supersonicData.isEmpty()) return dragData["bc"].toDouble();
-
-    // Find the closest velocity range
-    double closestCd = supersonicData[0].toMap()["cd"].toDouble();
-    double minDiff = std::abs(supersonicData[0].toMap()["velocity"].toDouble() - velocity);
-
-    for (const QVariant &entry : supersonicData) {
-        QVariantMap data = entry.toMap();
-        double entryVelocity = data["velocity"].toDouble();
-        double diff = std::abs(entryVelocity - velocity);
-        if (diff < minDiff) {
-            minDiff = diff;
-            closestCd = data["cd"].toDouble();
-        }
-    }
-
-    return closestCd;
+    return getDragCoefficientAtVelocity(bullet, velocity, model);
 }
 
 void MainWindow::onAlgorithmChanged(int index) {
@@ -124,57 +226,94 @@ void MainWindow::onUnitChanged(int index) {
 
 void MainWindow::updateUnitLabels() {
     if (useMetricUnits) {
-        ui->massLabel->setText("Mass (kg):");
-        ui->diameterLabel->setText("Diameter (m):");
+        ui->massLabel->setText("Mass (g):");
+        ui->diameterLabel->setText("Diameter (mm):");
         ui->muzzleVelocityLabel->setText("Muzzle Velocity (m/s):");
         ui->windSpeedLabel->setText("Wind Speed (m/s):");
         ui->plot->xAxis->setLabel("Range (m)");
         ui->plot->yAxis->setLabel("Height (m)");
     } else {
-        ui->massLabel->setText("Mass (lb):");
+        ui->massLabel->setText("Mass (gr):");
         ui->diameterLabel->setText("Diameter (in):");
         ui->muzzleVelocityLabel->setText("Muzzle Velocity (ft/s):");
-        ui->windSpeedLabel->setText("Wind Speed (ft/s):");
-        ui->plot->xAxis->setLabel("Range (ft)");
-        ui->plot->yAxis->setLabel("Height (ft)");
+        ui->windSpeedLabel->setText("Wind Speed (yd/s):");
+        ui->plot->xAxis->setLabel("Range (yd)");
+        ui->plot->yAxis->setLabel("Height (yd)");
     }
 }
 
 double MainWindow::convertToMetric(double value, const QString &unitType) {
     if (useMetricUnits) return value;
-    if (unitType == "mass") return value * 0.453592; // lb to kg
-    if (unitType == "length") return value * 0.0254; // in to m
+    if (unitType == "mass") return value / 15.4324; // grains to grams
+    if (unitType == "length") return value * 0.0254; // inches to meters
+    if (unitType == "range") return value * 0.9144; // yards to meters
     if (unitType == "velocity") return value * 0.3048; // ft/s to m/s
+    if (unitType == "windSpeed") return value * 0.9144; // yd/s to m/s
     return value;
 }
 
 double MainWindow::convertFromMetric(double value, const QString &unitType) {
     if (useMetricUnits) return value;
-    if (unitType == "mass") return value / 0.453592; // kg to lb
-    if (unitType == "length") return value / 0.0254; // m to in
+    if (unitType == "mass") return value * 15.4324; // grams to grains
+    if (unitType == "length") return value / 0.0254; // meters to inches
+    if (unitType == "range") return value / 0.9144; // meters to yards
     if (unitType == "velocity") return value / 0.3048; // m/s to ft/s
+    if (unitType == "windSpeed") return value / 0.9144; // m/s to yd/s
     return value;
 }
 
+double MainWindow::getDragCoefficientAtVelocity(const Bullet &bullet, double velocity, const QString &model)
+{
+    QVariantMap dragData = bullet.drag_coefficients.value(model).toMap();
+    if (dragData.isEmpty()) return 0.5; // Default value
+
+    // If we have a constant BC, use it
+    if (dragData.contains("bc")) {
+        double bc = dragData["bc"].toDouble();
+        double diameter = bullet.diameter_mm / 1000.0; // Convert to meters
+        double mass = bullet.weight_g / 1000.0; // Convert to kg
+        return (mass / (diameter * diameter)) / bc;
+    }
+
+    // If we have speed-dependent coefficients, find the closest
+    QVariantList supersonicData = dragData["supersonic"].toList();
+    if (supersonicData.isEmpty()) return 0.5; // Default value
+
+    // Convert velocity to ft/s for comparison with the table
+    double velocityFtPerSec = velocity / 0.3048;
+
+    // Find the closest velocity range
+    double closestCd = supersonicData[0].toMap()["cd"].toDouble();
+    double minDiff = std::abs(supersonicData[0].toMap()["velocity"].toDouble() - velocityFtPerSec);
+
+    for (const QVariant &entry : supersonicData) {
+        QVariantMap data = entry.toMap();
+        double entryVelocity = data["velocity"].toDouble();
+        double diff = std::abs(entryVelocity - velocityFtPerSec);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestCd = data["cd"].toDouble();
+        }
+    }
+
+    return closestCd;
+}
+
 void MainWindow::calculateTrajectory() {
-    int comboIndex = ui->bulletComboBox->currentIndex();
-    if (comboIndex < 0) {
+    int bulletIndex = ui->bulletComboBox->currentIndex();
+    if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
         QMessageBox::warning(this, "Error", "Please select a bullet profile.");
         return;
     }
 
-    size_t bulletIndex = static_cast<size_t>(comboIndex);
-    if (bulletIndex >= bulletDatabase.size()) {
-        QMessageBox::warning(this, "Error", "Please select a bullet profile.");
-        return;
-    }
-
-    Bullet selectedBullet = bulletDatabase[bulletIndex];
+    Bullet selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
     double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
     double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
     double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
     double launchAngle = ui->launchAngleEdit->text().toDouble();
-    double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "velocity");
+// possible edit
+//  double launchAngle = ui->launchAngleEdit->text().toDouble()
+                         double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
     double windDirection = ui->windDirectionEdit->text().toDouble();
     double latitude = ui->latitudeEdit->text().toDouble();
 
@@ -219,8 +358,10 @@ void MainWindow::calculateTrajectory() {
 void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajectory) {
     QVector<double> x, y;
     for (const auto& point : trajectory) {
-        x << point[0]; // x-coordinate
-        y << point[1]; // y-coordinate
+        double displayX = useMetricUnits ? point[0] : point[0] / 0.9144; // meters to yards
+        double displayY = useMetricUnits ? point[1] : point[1] / 0.9144; // meters to yards
+        x << displayX;
+        y << displayY;
     }
 
     ui->plot->clearGraphs();
@@ -232,8 +373,8 @@ void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajec
         ui->plot->xAxis->setLabel("Range (m)");
         ui->plot->yAxis->setLabel("Height (m)");
     } else {
-        ui->plot->xAxis->setLabel("Range (ft)");
-        ui->plot->yAxis->setLabel("Height (ft)");
+        ui->plot->xAxis->setLabel("Range (yd)");
+        ui->plot->yAxis->setLabel("Height (yd)");
     }
 
     ui->plot->rescaleAxes();
@@ -241,15 +382,8 @@ void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajec
 }
 
 void MainWindow::exportToCSV() {
-    QString fileName = QFileDialog::getSaveFileName(
-        this,
-        "Save Trajectory Data",
-        "",
-        "CSV Files (*.csv)"
-        );
-    if (fileName.isEmpty()) {
-        return;
-    }
+    QString fileName = QFileDialog::getSaveFileName(this, "Save Trajectory Data", "", "CSV Files (*.csv)");
+    if (fileName.isEmpty()) return;
 
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -273,11 +407,11 @@ void MainWindow::exportToCSV() {
     }
     out << "# Unit System: " << (useMetricUnits ? "Metric" : "Imperial") << "\n";
     out << "# Parameters:\n";
-    out << "# Mass: " << (useMetricUnits ? ui->massEdit->text() + " kg" : QString::number(ui->massEdit->text().toDouble() * 2.20462) + " lb") << "\n";
-    out << "# Diameter: " << (useMetricUnits ? ui->diameterEdit->text() + " m" : QString::number(ui->diameterEdit->text().toDouble() * 39.3701) + " in") << "\n";
-    out << "# Muzzle Velocity: " << (useMetricUnits ? ui->muzzleVelocityEdit->text() + " m/s" : QString::number(ui->muzzleVelocityEdit->text().toDouble() * 3.28084) + " ft/s") << "\n";
+    out << "# Mass: " << (useMetricUnits ? ui->massEdit->text() + " g" : ui->massEdit->text() + " gr") << "\n";
+    out << "# Diameter: " << (useMetricUnits ? ui->diameterEdit->text() + " mm" : ui->diameterEdit->text() + " in") << "\n";
+    out << "# Muzzle Velocity: " << (useMetricUnits ? ui->muzzleVelocityEdit->text() + " m/s" : ui->muzzleVelocityEdit->text() + " ft/s") << "\n";
     out << "# Launch Angle: " << ui->launchAngleEdit->text() << " rad\n";
-    out << "# Wind Speed: " << (useMetricUnits ? ui->windSpeedEdit->text() + " m/s" : QString::number(ui->windSpeedEdit->text().toDouble() * 3.28084) + " ft/s") << "\n";
+    out << "# Wind Speed: " << (useMetricUnits ? ui->windSpeedEdit->text() + " m/s" : ui->windSpeedEdit->text() + " yd/s") << "\n";
     out << "# Wind Direction: " << ui->windDirectionEdit->text() << " rad\n";
     out << "# Latitude: " << ui->latitudeEdit->text() << " rad\n";
     out << "# Drag Coefficient: " << ui->dragCoeffEdit->text() << "\n";
@@ -287,7 +421,7 @@ void MainWindow::exportToCSV() {
     if (useMetricUnits) {
         out << "Time (s),Range (m),Height (m),Velocity (m/s),Velocity X (m/s),Velocity Y (m/s)\n";
     } else {
-        out << "Time (s),Range (ft),Height (ft),Velocity (ft/s),Velocity X (ft/s),Velocity Y (ft/s)\n";
+        out << "Time (s),Range (yd),Height (yd),Velocity (ft/s),Velocity X (ft/s),Velocity Y (ft/s)\n";
     }
 
     // Get trajectory data
@@ -301,11 +435,10 @@ void MainWindow::exportToCSV() {
         double t = point[2];
 
         // Convert to imperial if needed
-        double displayX = useMetricUnits ? x : x * 3.28084;
-        double displayY = useMetricUnits ? y : y * 3.28084;
+        double displayX = useMetricUnits ? x : x / 0.9144; // meters to yards
+        double displayY = useMetricUnits ? y : y / 0.9144; // meters to yards
 
-        // For velocity, we need to access the model's internal state or calculate it
-        // This is a simplified approach; you may need to adjust based on your model
+        // For velocity, calculate from trajectory points
         double vx = 0.0, vy = 0.0, v = 0.0;
         if (i < trajectory.size() - 1) {
             double dx = trajectory[i+1][0] - x;
@@ -316,9 +449,9 @@ void MainWindow::exportToCSV() {
             v = sqrt(vx * vx + vy * vy);
         }
 
-        double displayVx = useMetricUnits ? vx : vx * 3.28084;
-        double displayVy = useMetricUnits ? vy : vy * 3.28084;
-        double displayV = useMetricUnits ? v : v * 3.28084;
+        double displayVx = useMetricUnits ? vx : vx / 0.3048; // m/s to ft/s
+        double displayVy = useMetricUnits ? vy : vy / 0.3048; // m/s to ft/s
+        double displayV = useMetricUnits ? v : v / 0.3048; // m/s to ft/s
 
         out << t << "," << displayX << "," << displayY << ","
             << displayV << "," << displayVx << "," << displayVy << "\n";
