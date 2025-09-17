@@ -247,7 +247,9 @@ void MainWindow::updateUnitLabels() {
         ui->plot->yAxis->setLabel("Height (yd)");
         ui->zeroRangeLabel->setText("Zero Range (yd):");
     }
-}
+
+    // Refresh the plot to show the updated labels
+    ui->plot->replot();}
 
 double MainWindow::convertToMetric(double value, const QString &unitType) {
     if (useMetricUnits) return value;
