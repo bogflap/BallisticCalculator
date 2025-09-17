@@ -1,3 +1,8 @@
+/**
+ * @file mainwindow.cpp
+ * @brief Implementation of the MainWindow class for the Ballistics Calculator application.
+ */
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -9,6 +14,15 @@
 #include "pejsa.h"
 #include "modifiedeuler.h"
 
+// Constructor
+/**
+ * @brief Constructs a MainWindow object.
+ *
+ * Initializes the UI, sets up connections between signals and slots,
+ * and prepares the application for use.
+ *
+ * @param parent The parent widget.
+ */
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -42,11 +56,22 @@ MainWindow::MainWindow(QWidget *parent)
     updateUnitLabels();
 }
 
+// Destructor
+/**
+ * @brief Destroys the MainWindow object.
+ *
+ * Cleans up the UI and any allocated resources.
+ */
 MainWindow::~MainWindow()
 {
     delete ui;
 }
 
+/**
+ * @brief Generates a trajectory table for the specified range and interval.
+ *
+ * Creates a table showing the bullet's trajectory at regular intervals up to the specified range.
+ */
 void MainWindow::generateTrajectoryTable() {
     bool ok;
     double maxRange = ui->tableMaxRangeEdit->text().toDouble(&ok);
@@ -74,6 +99,12 @@ void MainWindow::generateTrajectoryTable() {
 }
 
 
+/**
+ * @brief Calculates the zero angle for a given range.
+ *
+ * Uses a ternary search algorithm to find the optimal launch angle
+ * for hitting a target at the specified range.
+ */
 void MainWindow::calculateZeroAngle() {
     bool ok;
     double range = ui->zeroRangeEdit->text().toDouble(&ok);
@@ -93,6 +124,12 @@ void MainWindow::calculateZeroAngle() {
     ui->tabWidget->setCurrentIndex(0);
 }
 
+/**
+ * @brief Populates the trajectory table with calculated values.
+ *
+ * @param maxRange The maximum range to show in the table.
+ * @param interval The interval between rows in the table.
+ */
 void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
     int bulletIndex = ui->bulletComboBox->currentIndex();
     if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
@@ -233,6 +270,11 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
     delete tableModel;
 }
 
+/**
+ * @brief Calculates and displays the zero angle for a given range.
+ *
+ * @param range The range at which to calculate the zero angle.
+ */
 void MainWindow::calculateAndDisplayZeroAngle(double range) {
     int bulletIndex = ui->bulletComboBox->currentIndex();
     if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
@@ -336,6 +378,12 @@ void MainWindow::calculateAndDisplayZeroAngle(double range) {
     ui->launchAngleEdit->setText(QString::number(bestAngle, 'f', 4));
 }
 
+/**
+ * @brief Loads bullet data from a JSON file.
+ *
+ * Opens a file dialog for the user to select a bullet data file,
+ * then loads the bullet profiles from the JSON file.
+ */
 void MainWindow::loadBulletDataFile() {
     QString filePath = QFileDialog::getOpenFileName(
         this,
@@ -361,6 +409,11 @@ void MainWindow::loadBulletDataFile() {
     ui->tabWidget->setCurrentIndex(0);
 }
 
+/**
+ * @brief Populates the bullet combo box with available bullet profiles.
+ *
+ * Clears the current items and adds new items for each bullet profile in the database.
+ */
 void MainWindow::populateBulletComboBox() {
     ui->bulletComboBox->clear();
     for (const Bullet &bullet : bulletDatabase) {
@@ -371,6 +424,13 @@ void MainWindow::populateBulletComboBox() {
     }
 }
 
+/**
+ * @brief Handles changes to the selected bullet profile.
+ *
+ * Updates the mass and diameter fields when the user selects a different bullet profile.
+ *
+ * @param index The index of the selected bullet in the combo box.
+ */
 void MainWindow::onBulletSelected(int index) {
     if (index < 0 || static_cast<size_t>(index) >= bulletDatabase.size()) return;
 
@@ -384,19 +444,47 @@ void MainWindow::onBulletSelected(int index) {
     }
 }
 
+/**
+ * @brief Gets the drag coefficient for a bullet at a specific velocity.
+ *
+ * @param bullet The bullet for which to get the drag coefficient.
+ * @param velocity The velocity at which to get the drag coefficient.
+ * @param model The drag model to use (e.g., "G1", "G7").
+ * @return The drag coefficient at the specified velocity.
+ */
 double MainWindow::getDragCoefficient(const Bullet &bullet, double velocity, const QString &model) {
     return getDragCoefficientAtVelocity(bullet, velocity, model);
 }
 
+/**
+ * @brief Handles changes to the selected ballistics algorithm.
+ *
+ * Updates the current algorithm when the user selects a different one from the combo box.
+ *
+ * @param index The index of the selected algorithm in the combo box.
+ */
 void MainWindow::onAlgorithmChanged(int index) {
     currentAlgorithm = ui->algorithmComboBox->itemData(index).value<BallisticsAlgorithm>();
 }
 
+/**
+ * @brief Handles changes to the unit system selection.
+ *
+ * Updates all unit labels when the user changes between metric and imperial units.
+ *
+ * @param index The index of the selected unit system in the combo box.
+ */
 void MainWindow::onUnitChanged(int index) {
     useMetricUnits = (index == 0);
     updateUnitLabels();
 }
 
+/**
+ * @brief Updates the unit labels based on the selected unit system.
+ *
+ * Changes the text of all unit labels to reflect either metric or imperial units.
+ * Also updates the plot axis labels and refreshes the plot.
+ */
 void MainWindow::updateUnitLabels() {
     if (useMetricUnits) {
         ui->massLabel->setText("Mass (g):");
@@ -422,6 +510,13 @@ void MainWindow::updateUnitLabels() {
     // Refresh the plot to show the updated labels
     ui->plot->replot();}
 
+/**
+ * @brief Converts a value from the current unit system to metric units.
+ *
+ * @param value The value to convert.
+ * @param unitType The type of unit (e.g., "mass", "length", "velocity").
+ * @return The value converted to metric units.
+ */
 double MainWindow::convertToMetric(double value, const QString &unitType) {
     if (useMetricUnits) return value;
     if (unitType == "mass") return value / 15.4324; // grains to grams
@@ -432,6 +527,13 @@ double MainWindow::convertToMetric(double value, const QString &unitType) {
     return value;
 }
 
+/**
+ * @brief Converts a value from metric units to the current unit system.
+ *
+ * @param value The value to convert.
+ * @param unitType The type of unit (e.g., "mass", "length", "velocity").
+ * @return The value converted to the current unit system.
+ */
 double MainWindow::convertFromMetric(double value, const QString &unitType) {
     if (useMetricUnits) return value;
     if (unitType == "mass") return value * 15.4324; // grams to grains
@@ -442,6 +544,14 @@ double MainWindow::convertFromMetric(double value, const QString &unitType) {
     return value;
 }
 
+/**
+ * @brief Gets the drag coefficient for a bullet at a specific velocity.
+ *
+ * @param bullet The bullet for which to get the drag coefficient.
+ * @param velocity The velocity at which to get the drag coefficient.
+ * @param model The drag model to use (e.g., "G1", "G7").
+ * @return The drag coefficient at the specified velocity.
+ */
 double MainWindow::getDragCoefficientAtVelocity(const Bullet &bullet, double velocity, const QString &model)
 {
     QVariantMap dragData = bullet.drag_coefficients.value(model).toMap();
@@ -479,6 +589,12 @@ double MainWindow::getDragCoefficientAtVelocity(const Bullet &bullet, double vel
     return closestCd;
 }
 
+/**
+ * @brief Calculates the bullet trajectory based on input parameters.
+ *
+ * Uses the selected ballistics model to calculate and display the bullet's trajectory.
+ * Also switches to the Trajectory Visualization tab after calculation.
+ */
 void MainWindow::calculateTrajectory() {
     int bulletIndex = ui->bulletComboBox->currentIndex();
     if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
@@ -538,6 +654,11 @@ void MainWindow::calculateTrajectory() {
     ui->tabWidget->setCurrentIndex(1);
 }
 
+/**
+ * @brief Plots the trajectory on the graph.
+ *
+ * @param trajectory A vector of points representing the bullet's trajectory.
+ */
 void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajectory) {
     QVector<double> x, y;
     for (const auto& point : trajectory) {
@@ -564,6 +685,12 @@ void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajec
     ui->plot->replot();
 }
 
+/**
+ * @brief Exports the trajectory data to a CSV file.
+ *
+ * Opens a file dialog for the user to select a location to save the CSV file,
+ * then writes the trajectory data along with metadata to the file.
+ */
 void MainWindow::exportToCSV() {
     QString fileName = QFileDialog::getSaveFileName(this, "Save Trajectory Data", "", "CSV Files (*.csv)");
     if (fileName.isEmpty()) return;
@@ -644,18 +771,35 @@ void MainWindow::exportToCSV() {
     QMessageBox::information(this, "Success", "Trajectory data exported successfully.");
 }
 
+/**
+ * @brief Saves the current profile to a JSON file.
+ *
+ * Opens a file dialog for the user to select a location to save the profile,
+ * then writes the current parameters to a JSON file.
+ */
 void MainWindow::saveProfile() {
     QString fileName = QFileDialog::getSaveFileName(this, "Save Profile", "", "JSON Files (*.json)");
     if (fileName.isEmpty()) return;
     saveProfileToJson(fileName);
 }
 
+/**
+ * @brief Loads a profile from a JSON file.
+ *
+ * Opens a file dialog for the user to select a profile file,
+ * then loads the parameters from the JSON file.
+ */
 void MainWindow::loadProfile() {
     QString fileName = QFileDialog::getOpenFileName(this, "Load Profile", "", "JSON Files (*.json)");
     if (fileName.isEmpty()) return;
     loadProfileFromJson(fileName);
 }
 
+/**
+ * @brief Saves the current profile to a JSON file.
+ *
+ * @param fileName The path to the file where the profile will be saved.
+ */
 void MainWindow::saveProfileToJson(const QString &fileName) {
     QJsonObject profile;
     profile["mass"] = ui->massEdit->text();
@@ -678,6 +822,11 @@ void MainWindow::saveProfileToJson(const QString &fileName) {
     file.close();
 }
 
+/**
+ * @brief Loads a profile from a JSON file.
+ *
+ * @param fileName The path to the file containing the profile to load.
+ */
 void MainWindow::loadProfileFromJson(const QString &fileName) {
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly)) {
