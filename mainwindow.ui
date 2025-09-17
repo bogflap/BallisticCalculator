@@ -14,227 +14,264 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout_3">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_12">
-      <item>
-       <widget class="QComboBox" name="unitComboBox">
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="inputParametersTab">
+       <attribute name="title">
+        <string>Input Parameters</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <property name="text">
-          <string>Metric</string>
-         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_12">
+          <item>
+           <widget class="QComboBox" name="unitComboBox">
+            <item>
+             <property name="text">
+              <string>Metric</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Imperial</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="loadBulletDataButton">
+            <property name="text">
+             <string>Load Data Button</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
-         <property name="text">
-          <string>Imperial</string>
-         </property>
+         <widget class="QComboBox" name="algorithmComboBox"/>
         </item>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="loadBulletDataButton">
-        <property name="text">
-         <string>Load Data Button</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="calculateZeroButton">
-        <property name="text">
-         <string>Calculate Zero Angle</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <widget class="QComboBox" name="algorithmComboBox"/>
-    </item>
-    <item>
-     <widget class="QComboBox" name="bulletComboBox"/>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QLabel" name="massLabel">
-        <property name="text">
-         <string>Mass</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="massEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <item>
-       <widget class="QLabel" name="diameterLabel">
-        <property name="text">
-         <string>Diameter</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="diameterEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_8">
-      <item>
-       <widget class="QLabel" name="dragCoeffLabel">
-        <property name="text">
-         <string>Drag Coefficent</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="dragCoeffEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <item>
-       <widget class="QLabel" name="muzzleVelocityLabel">
-        <property name="text">
-         <string>Muzzle Velocity</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="muzzleVelocityEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_4">
-      <item>
-       <widget class="QLabel" name="windSpeedLabel">
-        <property name="text">
-         <string>Wind Speed</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="windSpeedEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_6">
-      <item>
-       <widget class="QLabel" name="windDirectionLabel">
-        <property name="text">
-         <string>Wind Direction</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="windDirectionEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_10">
-      <item>
-       <widget class="QLabel" name="zeroRangeLabel">
-        <property name="text">
-         <string>Launch Angle</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="zeroRangeEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_11">
-      <item>
-       <widget class="QLabel" name="zeroAngleLabel">
-        <property name="text">
-         <string>Zero Angle</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="zeroAngleValue">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_5">
-      <item>
-       <widget class="QLabel" name="windSpeedLabel_2">
-        <property name="text">
-         <string>Launch Angle</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="launchAngleEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_7">
-      <item>
-       <widget class="QLabel" name="latitudeLabel">
-        <property name="text">
-         <string>Latitude</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="latitudeEdit"/>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_9">
-      <item>
-       <widget class="QPushButton" name="loadProfileButton">
-        <property name="text">
-         <string>Load Profile</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="saveProfileButton">
-        <property name="text">
-         <string>Save Profile</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_13">
-      <item>
-       <widget class="QPushButton" name="calculateButton">
-        <property name="text">
-         <string>Calculate</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="exportButton">
-        <property name="text">
-         <string>Export</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <widget class="QCustomPlot" name="plot" native="true"/>
+        <item>
+         <widget class="QComboBox" name="bulletComboBox"/>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QLabel" name="massLabel">
+            <property name="text">
+             <string>Mass</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="massEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="diameterLabel">
+            <property name="text">
+             <string>Diameter</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="diameterEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <widget class="QLabel" name="dragCoeffLabel">
+            <property name="text">
+             <string>Drag Coefficent</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="dragCoeffEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QLabel" name="muzzleVelocityLabel">
+            <property name="text">
+             <string>Muzzle Velocity</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="muzzleVelocityEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QLabel" name="windSpeedLabel">
+            <property name="text">
+             <string>Wind Speed</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="windSpeedEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QLabel" name="windDirectionLabel">
+            <property name="text">
+             <string>Wind Direction</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="windDirectionEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item>
+           <widget class="QLabel" name="launchAngleLabel">
+            <property name="text">
+             <string>Launch Angle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="launchAngleEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_7">
+          <item>
+           <widget class="QLabel" name="latitudeLabel">
+            <property name="text">
+             <string>Latitude</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="latitudeEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_9">
+          <item>
+           <widget class="QPushButton" name="loadProfileButton">
+            <property name="text">
+             <string>Load Profile</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="saveProfileButton">
+            <property name="text">
+             <string>Save Profile</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="calculateButton">
+          <property name="text">
+           <string>Calculate</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="trajectoryVisualisationTab">
+       <attribute name="title">
+        <string>Trajectory Visualisation</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QCustomPlot" name="plot" native="true"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="exportButton">
+          <property name="text">
+           <string>Export</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="zeroAngleCalculationTab">
+       <attribute name="title">
+        <string>Zero Angle Calculation</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_10">
+          <item>
+           <widget class="QLabel" name="zeroRangeLabel">
+            <property name="text">
+             <string>Zero Range</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="zeroRangeEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_11">
+          <item>
+           <widget class="QLabel" name="zeroAngleLabel">
+            <property name="text">
+             <string>Zero Angle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="zeroAngleValue">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="calculateZeroButton">
+          <property name="text">
+           <string>Calculate Zero Angle</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>

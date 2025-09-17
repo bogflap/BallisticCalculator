@@ -60,6 +60,9 @@ void MainWindow::calculateZeroAngle() {
     }
 
     calculateAndDisplayZeroAngle(range);
+
+    // Switch to the Input Parameters tab after calculation
+    ui->tabWidget->setCurrentIndex(0);
 }
 
 void MainWindow::calculateAndDisplayZeroAngle(double range) {
@@ -185,6 +188,9 @@ void MainWindow::loadBulletDataFile() {
 
     populateBulletComboBox();
     QMessageBox::information(this, "Success", "Bullet data loaded successfully.");
+
+    // Switch to the Input Parameters tab after loading
+    ui->tabWidget->setCurrentIndex(0);
 }
 
 void MainWindow::populateBulletComboBox() {
@@ -313,7 +319,7 @@ void MainWindow::calculateTrajectory() {
     double launchAngle = ui->launchAngleEdit->text().toDouble();
 // possible edit
 //  double launchAngle = ui->launchAngleEdit->text().toDouble()
-                         double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
+    double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
     double windDirection = ui->windDirectionEdit->text().toDouble();
     double latitude = ui->latitudeEdit->text().toDouble();
 
@@ -353,6 +359,9 @@ void MainWindow::calculateTrajectory() {
     }
 
     plotTrajectory(ballisticsModel->getTrajectory());
+
+    // Switch to the Trajectory Visualization tab after calculation
+    ui->tabWidget->setCurrentIndex(1);
 }
 
 void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajectory) {
