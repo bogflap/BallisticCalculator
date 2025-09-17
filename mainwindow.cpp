@@ -37,6 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->bulletComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onBulletSelected);
     connect(ui->loadBulletDataButton, &QPushButton::clicked, this, &MainWindow::loadBulletDataFile);
     connect(ui->calculateZeroButton, &QPushButton::clicked, this, &MainWindow::calculateZeroAngle);
+    connect(ui->generateTableButton, &QPushButton::clicked, this, &MainWindow::generateTrajectoryTable);
 
     updateUnitLabels();
 }
@@ -45,6 +46,33 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+void MainWindow::generateTrajectoryTable() {
+    bool ok;
+    double maxRange = ui->tableMaxRangeEdit->text().toDouble(&ok);
+    if (!ok || maxRange <= 0) {
+        QMessageBox::warning(this, "Error", "Please enter a valid maximum range.");
+        return;
+    }
+
+    double interval = ui->tableIntervalEdit->text().toDouble(&ok);
+    if (!ok || interval <= 0) {
+        QMessageBox::warning(this, "Error", "Please enter a valid interval.");
+        return;
+    }
+
+    // Convert to meters if in imperial mode
+    if (!useMetricUnits) {
+        maxRange *= 0.9144; // yards to meters
+        interval *= 0.9144; // yards to meters
+    }
+
+    populateTrajectoryTable(maxRange, interval);
+
+    // Switch to the Trajectory Table tab
+    ui->tabWidget->setCurrentIndex(3); // Assuming this is the 4th tab (index 3)
+}
+
 
 void MainWindow::calculateZeroAngle() {
     bool ok;
@@ -63,6 +91,146 @@ void MainWindow::calculateZeroAngle() {
 
     // Switch to the Input Parameters tab after calculation
     ui->tabWidget->setCurrentIndex(0);
+}
+
+void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
+    int bulletIndex = ui->bulletComboBox->currentIndex();
+    if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
+        QMessageBox::warning(this, "Error", "Please select a bullet profile.");
+        return;
+    }
+
+    Bullet selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
+    double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
+    double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
+    double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
+    double launchAngle = ui->launchAngleEdit->text().toDouble();
+    double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
+    double windDirection = ui->windDirectionEdit->text().toDouble();
+    double latitude = ui->latitudeEdit->text().toDouble();
+
+    // Get drag coefficient based on selected model
+    double dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
+
+    // Clear and set up the table
+    ui->trajectoryTable->clear();
+    ui->trajectoryTable->setRowCount(0);
+    ui->trajectoryTable->setColumnCount(9);
+
+    // Set table headers
+    QStringList headers;
+    if (useMetricUnits) {
+        headers << "Range (m)" << "Height (m)" << "Time (s)" << "Velocity (m/s)"
+                << "Energy (J)" << "Drop (m)" << "Windage (m)"
+                << "Vertical Velocity (m/s)" << "Horizontal Velocity (m/s)";
+    } else {
+        headers << "Range (yd)" << "Height (yd)" << "Time (s)" << "Velocity (ft/s)"
+                << "Energy (ft-lb)" << "Drop (in)" << "Windage (in)"
+                << "Vertical Velocity (ft/s)" << "Horizontal Velocity (ft/s)";
+    }
+    ui->trajectoryTable->setHorizontalHeaderLabels(headers);
+
+    // Create a temporary ballistics model for table generation
+    BallisticsModel* tableModel = new DOF6();
+    tableModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle, windSpeed, windDirection, latitude);
+
+    // Generate trajectory data
+    double dt = 0.01;
+    std::vector<std::array<double, 3>> fullTrajectory;
+    for (int i = 0; i < 10000; ++i) {  // Increased iterations for longer ranges
+        tableModel->step(dt);
+        const auto& trajectory = tableModel->getTrajectory();
+        if (!trajectory.empty()) {
+            fullTrajectory = trajectory;
+        }
+        // Stop if the bullet has hit the ground (y < 0)
+        if (!trajectory.empty() && trajectory.back()[1] < 0) {
+            break;
+        }
+    }
+
+    // Find the maximum height for drop calculation
+    double maxHeight = 0;
+    for (size_t i = 0; i < fullTrajectory.size(); ++i) {
+        if (fullTrajectory[i][1] > maxHeight) {
+            maxHeight = fullTrajectory[i][1];
+        }
+    }
+
+    // Add rows to the table at specified intervals
+    int row = 0;
+    for (double range = 0; range <= maxRange; range += interval) {
+        ui->trajectoryTable->insertRow(row);
+
+        // Find the trajectory point closest to the current range
+        double closestX = 0, closestY = 0, closestT = 0;
+        size_t closestIndex = 0;
+        double minDist = std::numeric_limits<double>::max();
+
+        for (size_t i = 0; i < fullTrajectory.size(); ++i) {
+            double dist = std::abs(fullTrajectory[i][0] - range);
+            if (dist < minDist) {
+                minDist = dist;
+                closestX = fullTrajectory[i][0];
+                closestY = fullTrajectory[i][1];
+                closestT = fullTrajectory[i][2];
+                closestIndex = i;
+            }
+        }
+
+        // Calculate velocity components
+        double vx = 0.0, vy = 0.0, v = 0.0;
+        if (closestIndex > 0 && closestIndex < fullTrajectory.size()) {
+            double dt = fullTrajectory[closestIndex][2] - fullTrajectory[closestIndex-1][2];
+            if (dt > 0) {
+                vx = (fullTrajectory[closestIndex][0] - fullTrajectory[closestIndex-1][0]) / dt;
+                vy = (fullTrajectory[closestIndex][1] - fullTrajectory[closestIndex-1][1]) / dt;
+                v = std::sqrt(vx*vx + vy*vy);
+            }
+        }
+
+        // Calculate energy (E = 0.5 * m * v^2)
+        double energy = 0.5 * mass * v * v;  // in Joules
+
+        // Calculate drop (difference between max height and current height)
+        double drop = maxHeight - closestY;
+
+        // Calculate windage (lateral displacement due to wind)
+        // This is a simplified calculation - actual windage would require more complex modeling
+        double windage = 0.0;
+        if (windSpeed > 0) {
+            // Simple approximation: windage increases with range and wind speed
+            windage = 0.001 * closestX * windSpeed * std::sin(windDirection);
+        }
+
+        // Convert values to display units
+        double displayRange = useMetricUnits ? closestX : closestX / 0.9144;
+        double displayHeight = useMetricUnits ? closestY : closestY / 0.9144;
+        double displayV = useMetricUnits ? v : v / 0.3048;
+        double displayVx = useMetricUnits ? vx : vx / 0.3048;
+        double displayVy = useMetricUnits ? vy : vy / 0.3048;
+        double displayDrop = useMetricUnits ? drop : drop / 0.0254;  // meters to inches for drop
+        double displayWindage = useMetricUnits ? windage : windage / 0.0254;  // meters to inches for windage
+        double displayEnergy = useMetricUnits ? energy : energy * 0.737562;  // Joules to ft-lb
+
+        // Add items to the table
+        ui->trajectoryTable->setItem(row, 0, new QTableWidgetItem(QString::number(displayRange, 'f', 1)));
+        ui->trajectoryTable->setItem(row, 1, new QTableWidgetItem(QString::number(displayHeight, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 2, new QTableWidgetItem(QString::number(closestT, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 3, new QTableWidgetItem(QString::number(displayV, 'f', 1)));
+        ui->trajectoryTable->setItem(row, 4, new QTableWidgetItem(QString::number(displayEnergy, 'f', 1)));
+        ui->trajectoryTable->setItem(row, 5, new QTableWidgetItem(QString::number(displayDrop, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 6, new QTableWidgetItem(QString::number(displayWindage, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 7, new QTableWidgetItem(QString::number(displayVy, 'f', 1)));
+        ui->trajectoryTable->setItem(row, 8, new QTableWidgetItem(QString::number(displayVx, 'f', 1)));
+
+        row++;
+    }
+
+    // Resize columns to fit content
+    ui->trajectoryTable->resizeColumnsToContents();
+
+    delete tableModel;
 }
 
 void MainWindow::calculateAndDisplayZeroAngle(double range) {
@@ -238,6 +406,8 @@ void MainWindow::updateUnitLabels() {
         ui->plot->xAxis->setLabel("Range (m)");
         ui->plot->yAxis->setLabel("Height (m)");
         ui->zeroRangeLabel->setText("Zero Range (m):");
+        ui->tableMaxRangeLabel->setText("Max Range (m):");
+        ui->tableIntervalLabel->setText("Interval (m):");
     } else {
         ui->massLabel->setText("Mass (gr):");
         ui->diameterLabel->setText("Diameter (in):");
@@ -246,7 +416,8 @@ void MainWindow::updateUnitLabels() {
         ui->plot->xAxis->setLabel("Range (yd)");
         ui->plot->yAxis->setLabel("Height (yd)");
         ui->zeroRangeLabel->setText("Zero Range (yd):");
-    }
+        ui->tableMaxRangeLabel->setText("Max Range (yd):");
+        ui->tableIntervalLabel->setText("Interval (yd):");    }
 
     // Refresh the plot to show the updated labels
     ui->plot->replot();}

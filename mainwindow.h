@@ -42,6 +42,7 @@ private slots:
     void onBulletSelected(int index);
     void loadBulletDataFile();
     void calculateZeroAngle();
+    void generateTrajectoryTable();
 
 private:
     Ui::MainWindow *ui;
@@ -61,5 +62,6 @@ private:
     double getDragCoefficient(const Bullet &bullet, double velocity, const QString &model);
     void calculateAndDisplayZeroAngle(double range);
     double getDragCoefficientAtVelocity(const Bullet &bullet, double velocity, const QString &model);
+    void populateTrajectoryTable(double maxRange, double interval);
 };
 #endif // MAINWINDOW_H
