@@ -197,9 +197,8 @@ void MainWindow::populateBulletComboBox() {
     ui->bulletComboBox->clear();
     for (const Bullet &bullet : bulletDatabase) {
         QString bulletInfo = QString("%1 %2 %3gr")
-        .arg(bullet.manufacturer)
-            .arg(bullet.model)
-            .arg(bullet.weight_gr);
+        .arg(bullet.manufacturer, bullet.model)
+        .arg(bullet.weight_gr);
         ui->bulletComboBox->addItem(bulletInfo, QVariant::fromValue(bullet));
     }
 }
@@ -238,6 +237,7 @@ void MainWindow::updateUnitLabels() {
         ui->windSpeedLabel->setText("Wind Speed (m/s):");
         ui->plot->xAxis->setLabel("Range (m)");
         ui->plot->yAxis->setLabel("Height (m)");
+        ui->zeroRangeLabel->setText("Zero Range (m):");
     } else {
         ui->massLabel->setText("Mass (gr):");
         ui->diameterLabel->setText("Diameter (in):");
@@ -245,6 +245,7 @@ void MainWindow::updateUnitLabels() {
         ui->windSpeedLabel->setText("Wind Speed (yd/s):");
         ui->plot->xAxis->setLabel("Range (yd)");
         ui->plot->yAxis->setLabel("Height (yd)");
+        ui->zeroRangeLabel->setText("Zero Range (yd):");
     }
 }
 
