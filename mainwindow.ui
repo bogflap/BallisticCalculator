@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="inputParametersTab">
        <attribute name="title">
@@ -329,6 +329,39 @@
             <property name="text">
              <string>100</string>
             </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_16">
+          <item>
+           <widget class="QLabel" name="dropUnitLabel">
+            <property name="text">
+             <string>Drop Unit</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="dropUnitComboBox">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <item>
+             <property name="text">
+              <string>Inches</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>MOA</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>MIL</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>

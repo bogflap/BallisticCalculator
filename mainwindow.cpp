@@ -28,6 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
     , useMetricUnits(true)
     , scopeHeight(0.038)  // Default scope height in meters (38mm)
+    , dropUnit(DropUnit::Inches)
 {
     ui->setupUi(this);
 
@@ -42,6 +43,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->algorithmComboBox->addItem("Siacci", QVariant::fromValue(BallisticsAlgorithm::Siacci));
     ui->algorithmComboBox->addItem("Pejsa", QVariant::fromValue(BallisticsAlgorithm::Pejsa));
 
+    // Set up drop unit combo box
+    ui->dropUnitComboBox->addItem("Inches", QVariant::fromValue(DropUnit::Inches));
+    ui->dropUnitComboBox->addItem("MOA", QVariant::fromValue(DropUnit::MOA));
+    ui->dropUnitComboBox->addItem("MIL", QVariant::fromValue(DropUnit::MIL));
+
     // Connect signals and slots
     connect(ui->calculateButton, &QPushButton::clicked, this, &MainWindow::calculateTrajectory);
     connect(ui->exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
@@ -53,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->loadBulletDataButton, &QPushButton::clicked, this, &MainWindow::loadBulletDataFile);
     connect(ui->calculateZeroButton, &QPushButton::clicked, this, &MainWindow::calculateZeroAngle);
     connect(ui->generateTableButton, &QPushButton::clicked, this, &MainWindow::generateTrajectoryTable);
+    connect(ui->dropUnitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDropUnitChanged);
 
     updateUnitLabels();
 }
@@ -66,6 +73,37 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+/**
+ * @brief Handles changes to the drop unit selection.
+ *
+ * Updates the drop unit when the user selects a different unit from the combo box.
+ *
+ * @param index The index of the selected drop unit in the combo box.
+ */
+void MainWindow::onDropUnitChanged(int index) {
+    if (index < 0) return;
+
+    dropUnit = ui->dropUnitComboBox->itemData(index).value<DropUnit>();
+
+    // Regenerate the table if it exists
+    if (ui->trajectoryTable->rowCount() > 0) {
+        bool ok;
+        double maxRange = ui->tableMaxRangeEdit->text().toDouble(&ok);
+        if (!ok || maxRange <= 0) return;
+
+        double interval = ui->tableIntervalEdit->text().toDouble(&ok);
+        if (!ok || interval <= 0) return;
+
+        // Convert to meters if in imperial mode
+        if (!useMetricUnits) {
+            maxRange *= 0.9144; // yards to meters
+            interval *= 0.9144; // yards to meters
+        }
+
+        populateTrajectoryTable(maxRange, interval);
+    }
 }
 
 /**
@@ -155,16 +193,28 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
     ui->trajectoryTable->setRowCount(0);
     ui->trajectoryTable->setColumnCount(9);
 
-    // Add columns to the table for scope height adjusted values
+    // Set table headers based on units
     QStringList headers;
     if (useMetricUnits) {
         headers << "Range (m)" << "Height (m)" << "Height Above Scope (m)" << "Time (s)"
-                << "Velocity (m/s)" << "Energy (J)" << "Drop (m)" << "Windage (m)"
-                << "Vertical Velocity (m/s)" << "Horizontal Velocity (m/s)";
+                << "Velocity (m/s)" << "Energy (J)" << "Drop (";
+
+        // Add drop unit to header
+        if (dropUnit == DropUnit::Inches) headers.last() += "in)";
+        else if (dropUnit == DropUnit::MOA) headers.last() += "MOA)";
+        else headers.last() += "MIL)";
+
+        headers << "Windage (m)" << "Vertical Velocity (m/s)" << "Horizontal Velocity (m/s)";
     } else {
         headers << "Range (yd)" << "Height (yd)" << "Height Above Scope (yd)" << "Time (s)"
-                << "Velocity (ft/s)" << "Energy (ft-lb)" << "Drop (in)" << "Windage (in)"
-                << "Vertical Velocity (ft/s)" << "Horizontal Velocity (ft/s)";
+                << "Velocity (ft/s)" << "Energy (ft-lb)" << "Drop (";
+
+        // Add drop unit to header
+        if (dropUnit == DropUnit::Inches) headers.last() += "in)";
+        else if (dropUnit == DropUnit::MOA) headers.last() += "MOA)";
+        else headers.last() += "MIL)";
+
+        headers << "Windage (in)" << "Vertical Velocity (ft/s)" << "Horizontal Velocity (ft/s)";
     }
     ui->trajectoryTable->setHorizontalHeaderLabels(headers);
 
@@ -255,6 +305,32 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
         double heightAboveScope = closestY + scopeHeight;
         double displayHeightAboveScope = useMetricUnits ? heightAboveScope : heightAboveScope / 0.9144;
 
+        // Convert drop to the selected unit
+        if (useMetricUnits) {
+            if (dropUnit == DropUnit::Inches) {
+                displayDrop = drop / 0.0254;  // meters to inches
+            } else if (dropUnit == DropUnit::MOA) {
+                // MOA = (drop in inches) / (range in yards) * 100
+                // First convert drop to inches and range to yards
+                displayDrop = (drop / 0.0254) / (closestX / 0.9144) * 100;
+            } else { // MIL
+                // MIL = (drop in meters) / (range in meters) * 1000
+                displayDrop = (drop / closestX) * 1000;
+            }
+        } else {
+            if (dropUnit == DropUnit::Inches) {
+                displayDrop = drop / 0.0254;  // meters to inches
+            } else if (dropUnit == DropUnit::MOA) {
+                // MOA = (drop in inches) / (range in yards) * 100
+                displayDrop = (drop / 0.0254) / (closestX / 0.9144) * 100;
+            } else { // MIL
+                // Convert range to yards and drop to inches for display, but calculate MIL in meters
+                displayDrop = (drop / (closestX * 0.9144 / 0.9144)) * 1000;  // Simplified for display
+                // Actually, MIL is (drop in meters)/(range in meters)*1000, so we need to convert properly:
+                displayDrop = (drop / closestX) * 1000;
+            }
+        }
+
         // Add items to the table
         ui->trajectoryTable->setItem(row, 0, new QTableWidgetItem(QString::number(displayRange, 'f', 1)));
         ui->trajectoryTable->setItem(row, 1, new QTableWidgetItem(QString::number(displayHeight, 'f', 2)));
@@ -269,6 +345,52 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
 
         row++;
     }
+}
+
+/**
+ * @brief Converts drop in meters to the selected drop unit.
+ *
+ * @param drop The drop value in meters.
+ * @param range The range in meters.
+ * @return The drop value in the selected unit.
+ */
+double MainWindow::convertDropToDisplayUnit(double drop, double range) const {
+    if (dropUnit == DropUnit::Inches) {
+        return drop / 0.0254;  // meters to inches
+    } else if (dropUnit == DropUnit::MOA) {
+        // MOA = (drop in inches) / (range in yards) * 100
+        return (drop / 0.0254) / (range / 0.9144) * 100;
+    } else { // MIL
+        // MIL = (drop in meters) / (range in meters) * 1000
+        return (drop / range) * 1000;
+    }
+}
+
+/**
+ * @brief Converts a value in MOA to meters.
+ *
+ * @param moa The value in MOA.
+ * @param range The range in meters.
+ * @return The value in meters.
+ */
+double MainWindow::moaToMeters(double moa, double range) const {
+    // MOA to inches: moa_value * range_in_yards / 100
+    // Then convert inches to meters: inches * 0.0254
+    double rangeInYards = range / 0.9144;
+    double inches = moa * rangeInYards / 100;
+    return inches * 0.0254;
+}
+
+/**
+ * @brief Converts a value in MIL to meters.
+ *
+ * @param mil The value in MIL.
+ * @param range The range in meters.
+ * @return The value in meters.
+ */
+double MainWindow::milToMeters(double mil, double range) const {
+    // MIL to meters: mil_value * range_in_meters / 1000
+    return mil * range / 1000;
 }
 
 /**

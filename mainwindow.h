@@ -43,6 +43,7 @@ private slots:
     void loadBulletDataFile();
     void calculateZeroAngle();
     void generateTrajectoryTable();
+    void onDropUnitChanged(int index);
 
 private:
     Ui::MainWindow *ui;
@@ -51,6 +52,15 @@ private:
     BallisticsAlgorithm currentAlgorithm;
     std::vector<Bullet> bulletDatabase;
     double scopeHeight;  // Height of the scope above the barrel in meters
+
+private:
+    enum class DropUnit {
+        Inches,
+        MOA,
+        MIL
+    };
+    DropUnit dropUnit;
+
 private:
     void plotTrajectory(const std::vector<std::array<double, 3>>& trajectory);
     double convertToMetric(double value, const QString &unitType);
@@ -63,5 +73,8 @@ private:
     void calculateAndDisplayZeroAngle(double range);
     double getDragCoefficientAtVelocity(const Bullet &bullet, double velocity, const QString &model);
     void populateTrajectoryTable(double maxRange, double interval);
+    double convertDropToDisplayUnit(double drop, double range) const;
+    double moaToMeters(double moa, double range) const;
+    double milToMeters(double mil, double range) const;
 };
 #endif // MAINWINDOW_H
