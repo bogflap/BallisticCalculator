@@ -19,7 +19,8 @@
  * initialization happens in the setParameters method.
  */
 RungeKutta::RungeKutta() {
-    // No special initialization needed
+    // Initialize scope height to a default value
+    scopeHeight = 0.0;
 }
 
 /**
@@ -37,10 +38,12 @@ RungeKutta::RungeKutta() {
  * @param windSpeed The wind speed in meters per second.
  * @param windDirection The wind direction in radians.
  * @param latitude The latitude for Coriolis effect calculations (not used in this model).
+ * @param scopeHeight The height of the scope centre line abobe the barrel center line in meters
  */
 void RungeKutta::setParameters(double mass, double diameter, double dragCoeff,
                                double muzzleVelocity, double launchAngle,
-                               double windSpeed, double windDirection, double latitude) {
+                               double windSpeed, double windDirection,
+                               double latitude, double scopeHeight) {
     this->mass = mass;
     this->diameter = diameter;
     this->dragCoeff = dragCoeff;
@@ -49,16 +52,13 @@ void RungeKutta::setParameters(double mass, double diameter, double dragCoeff,
     this->windSpeed = windSpeed;
     this->windDirection = windDirection;
     this->latitude = latitude;
+    this->scopeHeight = scopeHeight;
 
-    // Initialize the state vector:
-    // state[0] = x position (m)
-    // state[1] = y position (m)
-    // state[2] = x velocity (m/s)
-    // state[3] = y velocity (m/s)
-    // state[4] = time (s)
+    // Initialize the state vector with scope height adjustment
+    // The bullet starts at y = -scopeHeight because the scope is above the barrel
     state = {
         0.0,  // Initial x position
-        0.0,  // Initial y position
+        -scopeHeight,  // Initial y position (below scope line)
         muzzleVelocity * cos(launchAngle),  // Initial x velocity
         muzzleVelocity * sin(launchAngle),  // Initial y velocity
         0.0   // Initial time
@@ -107,6 +107,8 @@ double RungeKutta::calculateDrag(double velocity) const {
  */
 std::array<double, 5> RungeKutta::getDerivatives(const std::array<double, 5> &s) const {
     // Extract components from the state vector
+    double x = s[0];
+    double y = s[1];
     double vx = s[2];
     double vy = s[3];
 
@@ -117,7 +119,6 @@ std::array<double, 5> RungeKutta::getDerivatives(const std::array<double, 5> &s)
     double dragForce = calculateDrag(v);
 
     // Calculate drag acceleration in x and y directions
-    // Drag acts opposite to the velocity vector
     double dragAx = -(dragForce / mass) * (vx / v);
     double dragAy = -(dragForce / mass) * (vy / v);
 
@@ -125,12 +126,7 @@ std::array<double, 5> RungeKutta::getDerivatives(const std::array<double, 5> &s)
     double windX = windSpeed * cos(windDirection);
     double windY = windSpeed * sin(windDirection);
 
-    // Define the derivatives:
-    // dx/dt = vx (horizontal velocity)
-    // dy/dt = vy (vertical velocity)
-    // dvx/dt = dragAx + windX (horizontal acceleration)
-    // dvy/dt = -g + dragAy + windY (vertical acceleration, including gravity)
-    // dt/dt = 1 (time always increases at 1 second per second)
+    // Define the derivatives
     return std::array<double, 5>{
         vx,                          // dx/dt
         vy,                          // dy/dt

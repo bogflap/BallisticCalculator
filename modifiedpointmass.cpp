@@ -5,8 +5,9 @@
 ModifiedPointMass::ModifiedPointMass() {}
 
 void ModifiedPointMass::setParameters(double mass, double diameter, double dragCoeff,
-                                      double muzzleVelocity, double launchAngle,
-                                      double windSpeed, double windDirection, double latitude) {
+                         double muzzleVelocity, double launchAngle,
+                         double windSpeed, double windDirection,
+                         double latitude, double scopeHeight) {
     this->mass = mass;
     this->diameter = diameter;
     this->dragCoeff = dragCoeff;
@@ -15,9 +16,13 @@ void ModifiedPointMass::setParameters(double mass, double diameter, double dragC
     this->windSpeed = windSpeed;
     this->windDirection = windDirection;
     this->latitude = latitude;
-    state = {0, 0, muzzleVelocity, launchAngle, 0};
+    this->scopeHeight = scopeHeight;
+
+    // Initialize the state vector with scope height adjustment
+    state = {0, -scopeHeight, muzzleVelocity, launchAngle, 0};
+
     trajectory.clear();
-    trajectory.push_back({state[0], state[1], state[4]});
+    trajectory.push_back({state[0], state[1], 0});
 }
 
 void ModifiedPointMass::step(double dt) {

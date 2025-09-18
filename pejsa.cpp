@@ -5,7 +5,7 @@ Pejsa::Pejsa() {}
 
 void Pejsa::setParameters(double mass, double diameter, double dragCoeff,
                           double muzzleVelocity, double launchAngle,
-                          double windSpeed, double windDirection, double latitude) {
+                          double windSpeed, double windDirection, double latitude, double /* scopeHeight */) {
     this->mass = mass;
     this->diameter = diameter;
     this->dragCoeff = dragCoeff;

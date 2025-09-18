@@ -27,6 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , useMetricUnits(true)
+    , scopeHeight(0.038)  // Default scope height in meters (38mm)
 {
     ui->setupUi(this);
 
@@ -154,22 +155,22 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
     ui->trajectoryTable->setRowCount(0);
     ui->trajectoryTable->setColumnCount(9);
 
-    // Set table headers
+    // Add columns to the table for scope height adjusted values
     QStringList headers;
     if (useMetricUnits) {
-        headers << "Range (m)" << "Height (m)" << "Time (s)" << "Velocity (m/s)"
-                << "Energy (J)" << "Drop (m)" << "Windage (m)"
+        headers << "Range (m)" << "Height (m)" << "Height Above Scope (m)" << "Time (s)"
+                << "Velocity (m/s)" << "Energy (J)" << "Drop (m)" << "Windage (m)"
                 << "Vertical Velocity (m/s)" << "Horizontal Velocity (m/s)";
     } else {
-        headers << "Range (yd)" << "Height (yd)" << "Time (s)" << "Velocity (ft/s)"
-                << "Energy (ft-lb)" << "Drop (in)" << "Windage (in)"
+        headers << "Range (yd)" << "Height (yd)" << "Height Above Scope (yd)" << "Time (s)"
+                << "Velocity (ft/s)" << "Energy (ft-lb)" << "Drop (in)" << "Windage (in)"
                 << "Vertical Velocity (ft/s)" << "Horizontal Velocity (ft/s)";
     }
     ui->trajectoryTable->setHorizontalHeaderLabels(headers);
 
     // Create a temporary ballistics model for table generation
     BallisticsModel* tableModel = new DOF6();
-    tableModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle, windSpeed, windDirection, latitude);
+    tableModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle, windSpeed, windDirection, latitude, scopeHeight);
 
     // Generate trajectory data
     double dt = 0.01;
@@ -250,24 +251,24 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
         double displayWindage = useMetricUnits ? windage : windage / 0.0254;  // meters to inches for windage
         double displayEnergy = useMetricUnits ? energy : energy * 0.737562;  // Joules to ft-lb
 
+        // Calculate height above scope (current height + scope height)
+        double heightAboveScope = closestY + scopeHeight;
+        double displayHeightAboveScope = useMetricUnits ? heightAboveScope : heightAboveScope / 0.9144;
+
         // Add items to the table
         ui->trajectoryTable->setItem(row, 0, new QTableWidgetItem(QString::number(displayRange, 'f', 1)));
         ui->trajectoryTable->setItem(row, 1, new QTableWidgetItem(QString::number(displayHeight, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 2, new QTableWidgetItem(QString::number(closestT, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 3, new QTableWidgetItem(QString::number(displayV, 'f', 1)));
-        ui->trajectoryTable->setItem(row, 4, new QTableWidgetItem(QString::number(displayEnergy, 'f', 1)));
-        ui->trajectoryTable->setItem(row, 5, new QTableWidgetItem(QString::number(displayDrop, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 6, new QTableWidgetItem(QString::number(displayWindage, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 7, new QTableWidgetItem(QString::number(displayVy, 'f', 1)));
-        ui->trajectoryTable->setItem(row, 8, new QTableWidgetItem(QString::number(displayVx, 'f', 1)));
+        ui->trajectoryTable->setItem(row, 2, new QTableWidgetItem(QString::number(displayHeightAboveScope, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 3, new QTableWidgetItem(QString::number(closestT, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 4, new QTableWidgetItem(QString::number(displayV, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 5, new QTableWidgetItem(QString::number(displayEnergy, 'f', 1)));
+        ui->trajectoryTable->setItem(row, 6, new QTableWidgetItem(QString::number(displayDrop, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 7, new QTableWidgetItem(QString::number(displayWindage, 'f', 2)));
+        ui->trajectoryTable->setItem(row, 8, new QTableWidgetItem(QString::number(displayVy, 'f', 1)));
+        ui->trajectoryTable->setItem(row, 9, new QTableWidgetItem(QString::number(displayVx, 'f', 1)));
 
         row++;
     }
-
-    // Resize columns to fit content
-    ui->trajectoryTable->resizeColumnsToContents();
-
-    delete tableModel;
 }
 
 /**
@@ -295,7 +296,7 @@ void MainWindow::calculateAndDisplayZeroAngle(double range) {
 
     // Create a temporary ballistics model for zero angle calculation
     BallisticsModel* zeroModel = new DOF6(); // Using 6DOF for zero angle calculation
-    zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, 0, windSpeed, windDirection, latitude);
+    zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, 0, windSpeed, windDirection, latitude, scopeHeight);
 
     // Binary search to find the zero angle
     double lowAngle = -0.1; // -0.1 radians
@@ -310,7 +311,7 @@ void MainWindow::calculateAndDisplayZeroAngle(double range) {
         double midAngle2 = highAngle - (highAngle - lowAngle) / 3.0;
 
         // Test midAngle1
-        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle1, windSpeed, windDirection, latitude);
+        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle1, windSpeed, windDirection, latitude, scopeHeight);
         double dt = 0.01;
         double currentX = 0.0;
         double currentY = 0.0;
@@ -329,7 +330,7 @@ void MainWindow::calculateAndDisplayZeroAngle(double range) {
         double error1 = std::abs(currentY);
 
         // Test midAngle2
-        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle2, windSpeed, windDirection, latitude);
+        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle2, windSpeed, windDirection, latitude, scopeHeight);
         currentX = 0.0;
         currentY = 0.0;
         for (int step = 0; step < 5000; ++step) {
@@ -491,24 +492,35 @@ void MainWindow::updateUnitLabels() {
         ui->diameterLabel->setText("Diameter (mm):");
         ui->muzzleVelocityLabel->setText("Muzzle Velocity (m/s):");
         ui->windSpeedLabel->setText("Wind Speed (m/s):");
-        ui->plot->xAxis->setLabel("Range (m)");
-        ui->plot->yAxis->setLabel("Height (m)");
         ui->zeroRangeLabel->setText("Zero Range (m):");
         ui->tableMaxRangeLabel->setText("Max Range (m):");
         ui->tableIntervalLabel->setText("Interval (m):");
+        ui->scopeHeightLabel->setText("Scope Height (mm):");
+
+        // Update plot axis labels
+        if (ui->plot) {
+            ui->plot->xAxis->setLabel("Range (m)");
+            ui->plot->yAxis->setLabel("Height (m)");
+            ui->plot->replot();
+        }
     } else {
         ui->massLabel->setText("Mass (gr):");
         ui->diameterLabel->setText("Diameter (in):");
         ui->muzzleVelocityLabel->setText("Muzzle Velocity (ft/s):");
         ui->windSpeedLabel->setText("Wind Speed (yd/s):");
-        ui->plot->xAxis->setLabel("Range (yd)");
-        ui->plot->yAxis->setLabel("Height (yd)");
         ui->zeroRangeLabel->setText("Zero Range (yd):");
         ui->tableMaxRangeLabel->setText("Max Range (yd):");
-        ui->tableIntervalLabel->setText("Interval (yd):");    }
+        ui->tableIntervalLabel->setText("Interval (yd):");
+        ui->scopeHeightLabel->setText("Scope Height (in):");
 
-    // Refresh the plot to show the updated labels
-    ui->plot->replot();}
+        // Update plot axis labels
+        if (ui->plot) {
+            ui->plot->xAxis->setLabel("Range (yd)");
+            ui->plot->yAxis->setLabel("Height (yd)");
+            ui->plot->replot();
+        }
+    }
+}
 
 /**
  * @brief Converts a value from the current unit system to metric units.
@@ -602,13 +614,19 @@ void MainWindow::calculateTrajectory() {
         return;
     }
 
+    // Get scope height from UI and convert to meters
+    double scopeHeightInput = ui->scopeHeightEdit->text().toDouble();
+    if (useMetricUnits) {
+        scopeHeight = scopeHeightInput / 1000.0;  // Convert mm to m
+    } else {
+        scopeHeight = scopeHeightInput * 0.0254;  // Convert in to m
+    }
+
     Bullet selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
     double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
     double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
     double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
     double launchAngle = ui->launchAngleEdit->text().toDouble();
-// possible edit
-//  double launchAngle = ui->launchAngleEdit->text().toDouble()
     double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
     double windDirection = ui->windDirectionEdit->text().toDouble();
     double latitude = ui->latitudeEdit->text().toDouble();
@@ -641,7 +659,9 @@ void MainWindow::calculateTrajectory() {
         break;
     }
 
-    ballisticsModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle, windSpeed, windDirection, latitude);
+    // Pass scopeHeight to setParameters
+    ballisticsModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle,
+                                   windSpeed, windDirection, latitude, scopeHeight);
 
     double dt = 0.01;
     for (int i = 0; i < 1000; ++i) {
@@ -668,9 +688,25 @@ void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajec
         y << displayY;
     }
 
+    // Clear all graphs
     ui->plot->clearGraphs();
+
+    // Add graph for the trajectory
     ui->plot->addGraph();
     ui->plot->graph(0)->setData(x, y);
+    ui->plot->graph(0)->setPen(QPen(Qt::blue));
+    ui->plot->graph(0)->setName("Trajectory");
+
+    // Add graph for the scope line (horizontal line at y=0)
+    QVector<double> scopeX = x;
+    QVector<double> scopeY;
+    for (size_t i = 0; i < x.size(); ++i) {
+        scopeY << 0;  // Scope line is at y=0 in the plot (which represents the scope height above barrel)
+    }
+    ui->plot->addGraph();
+    ui->plot->graph(1)->setData(scopeX, scopeY);
+    ui->plot->graph(1)->setPen(QPen(Qt::red));
+    ui->plot->graph(1)->setName("Scope Line");
 
     // Set axis labels based on unit system
     if (useMetricUnits) {
@@ -681,7 +717,27 @@ void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajec
         ui->plot->yAxis->setLabel("Height (yd)");
     }
 
-    ui->plot->rescaleAxes();
+    // Set axis ranges with some padding
+    double xMin = 0;
+    double xMax = x.isEmpty() ? 100 : *std::max_element(x.constBegin(), x.constEnd()) * 1.05;
+    double yMin = y.isEmpty() ? -0.1 : *std::min_element(y.constBegin(), y.constEnd()) * 1.05;
+    double yMax = y.isEmpty() ? 0.1 : *std::max_element(y.constBegin(), y.constEnd()) * 1.05;
+
+    // Adjust yMin and yMax to include scope height in the view
+    if (!useMetricUnits) {
+        // Convert scope height to yards for display
+        double displayScopeHeight = scopeHeight / 0.9144;
+        yMin = std::min(yMin, -displayScopeHeight * 1.1);
+        yMax = std::max(yMax, displayScopeHeight * 1.1);
+    } else {
+        // Scope height is already in meters
+        yMin = std::min(yMin, -scopeHeight * 1.1);
+        yMax = std::max(yMax, scopeHeight * 1.1);
+    }
+
+    ui->plot->xAxis->setRange(xMin, xMax);
+    ui->plot->yAxis->setRange(yMin, yMax);
+
     ui->plot->replot();
 }
 

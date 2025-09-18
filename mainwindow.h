@@ -50,7 +50,7 @@ private:
     bool useMetricUnits;
     BallisticsAlgorithm currentAlgorithm;
     std::vector<Bullet> bulletDatabase;
-
+    double scopeHeight;  // Height of the scope above the barrel in meters
 private:
     void plotTrajectory(const std::vector<std::array<double, 3>>& trajectory);
     double convertToMetric(double value, const QString &unitType);

@@ -59,7 +59,8 @@ AtmosphereData Siacci::getAtmosphereData(double altitude) const {
 // Set parameters and calculate Siacci coefficients
 void Siacci::setParameters(double mass, double diameter, double dragCoeff,
                            double muzzleVelocity, double launchAngle,
-                           double windSpeed, double windDirection, double latitude) {
+                           double windSpeed, double windDirection,
+                           double latitude, double scopeHeight) {
     this->mass = mass;
     this->diameter = diameter;
     this->dragCoeff = dragCoeff;
@@ -71,6 +72,7 @@ void Siacci::setParameters(double mass, double diameter, double dragCoeff,
     this->currentTime = 0.0;
     this->currentX = 0.0;
     this->currentY = 0.0;
+    this->scopeHeight = scopeHeight;
     this->ballisticCoefficient = mass / (diameter * diameter * dragCoeff);
 
     calculateSiacciCoefficients();
@@ -117,8 +119,9 @@ void Siacci::step(double dt) {
     double v = muzzleVelocity * exp(-currentTime / coefficients.tau);
     double theta = launchAngle - siacciFunction(currentTime / coefficients.tau) / coefficients.C1;
 
-    double drag = calculateDrag(v, currentY);
-    double dragAccel = drag / mass;
+// Unused variable warnings
+//    double drag = calculateDrag(v, currentY);
+//    double dragAccel = drag / mass;
 
     currentX += v * cos(theta) * dt;
     currentY += v * sin(theta) * dt - 0.5 * 9.81 * dt * dt;

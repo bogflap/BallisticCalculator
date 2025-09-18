@@ -8,7 +8,8 @@ ModifiedEuler::ModifiedEuler() {
 
 void ModifiedEuler::setParameters(double mass, double diameter, double dragCoeff,
                                   double muzzleVelocity, double launchAngle,
-                                  double windSpeed, double windDirection, double latitude) {
+                                  double windSpeed, double windDirection,
+                                  double latitude, double scopeHeight) {
     this->mass = mass;
     this->diameter = diameter;
     this->dragCoeff = dragCoeff;
@@ -17,9 +18,10 @@ void ModifiedEuler::setParameters(double mass, double diameter, double dragCoeff
     this->windSpeed = windSpeed;
     this->windDirection = windDirection;
     this->latitude = latitude;
+    this->scopeHeight = scopeHeight;
 
     // Initial state: x, y, vx, vy, time
-    state = {0.0, 0.0, muzzleVelocity * cos(launchAngle), muzzleVelocity * sin(launchAngle), 0.0};
+    state = {0.0, -scopeHeight, muzzleVelocity * cos(launchAngle), muzzleVelocity * sin(launchAngle), 0.0};
     trajectory.clear();
     trajectory.push_back({state[0], state[1], state[4]});
 }
@@ -52,8 +54,9 @@ void ModifiedEuler::step(double dt) {
     double windY = windSpeed * sin(windDirection);
 
     // Predictor step (Euler)
-    double xPred = x + vx * dt;
-    double yPred = y + vy * dt;
+// Unused variable warnings
+//    double xPred = x + vx * dt;
+//    double yPred = y + vy * dt;
     double vxPred = vx + (dragAx + windX) * dt;
     double vyPred = vy + (-9.81 + dragAy + windY) * dt;
 
