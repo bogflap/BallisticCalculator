@@ -61,6 +61,97 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->generateTableButton, &QPushButton::clicked, this, &MainWindow::generateTrajectoryTable);
     connect(ui->dropUnitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDropUnitChanged);
 
+    connect(ui->massEdit, &QLineEdit::editingFinished, this, [this]() {
+        double temp;
+        validateInput(ui->massEdit, temp, 0.1);
+    });
+
+    connect(ui->diameterEdit, &QLineEdit::editingFinished, this, [this]() {
+        double temp;
+        validateInput(ui->diameterEdit, temp, 0.001, 0.2);
+    });
+
+    connect(ui->muzzleVelocityEdit, &QLineEdit::editingFinished, this, [this]() {
+        double temp;
+        validateInput(ui->muzzleVelocityEdit, temp, 10.0);
+    });
+
+    connect(ui->launchAngleEdit, &QLineEdit::editingFinished, this, [this]() {
+        bool ok;
+        ui->launchAngleEdit->text().toDouble(&ok);
+        if (!ok) {
+            QMessageBox::warning(this, "Invalid Input", "Launch angle must be a valid number between -90 and 90 degrees.");
+            ui->launchAngleEdit->setFocus();
+        }
+    });
+
+    connect(ui->windSpeedEdit, &QLineEdit::editingFinished, this, [this]() {
+        double temp;
+        validateInput(ui->windSpeedEdit, temp, 0.0);
+    });
+
+    connect(ui->windDirectionEdit, &QLineEdit::editingFinished, this, [this]() {
+        bool ok;
+        ui->windDirectionEdit->text().toDouble(&ok);
+        if (!ok) {
+            QMessageBox::warning(this, "Invalid Input", "Wind direction must be a valid number.");
+            ui->windDirectionEdit->setFocus();
+        }
+    });
+
+    connect(ui->latitudeEdit, &QLineEdit::editingFinished, this, [this]() {
+        bool ok;
+        double latitude = ui->latitudeEdit->text().toDouble(&ok);
+        if (!ok || latitude < -90 || latitude > 90) {
+            QMessageBox::warning(this, "Invalid Input", "Latitude must be between -90 and 90 degrees.");
+            ui->latitudeEdit->setFocus();
+        }
+    });
+
+    connect(ui->scopeHeightEdit, &QLineEdit::editingFinished, this, [this]() {
+        double temp;
+        validateInput(ui->scopeHeightEdit, temp, 0.001, 0.5);
+    });
+
+    connect(ui->dragCoeffEdit, &QLineEdit::editingFinished, this, [this]() {
+        double temp;
+        validateInput(ui->dragCoeffEdit, temp, 0.01, 5.0);
+    });
+
+    connect(ui->tableMaxRangeEdit, &QLineEdit::editingFinished, this, [this]() {
+        bool ok;
+        double val = ui->tableMaxRangeEdit->text().toDouble(&ok);
+        if (!ok || val <= 0) {
+            QMessageBox::warning(this, "Invalid Input", "Maximum range must be a positive number.");
+            ui->tableMaxRangeEdit->setFocus();
+        }
+    });
+
+    connect(ui->tableIntervalEdit, &QLineEdit::editingFinished, this, [this]() {
+        bool ok;
+        double val = ui->tableIntervalEdit->text().toDouble(&ok);
+        if (!ok || val <= 0) {
+            QMessageBox::warning(this, "Invalid Input", "Interval must be a positive number.");
+            ui->tableIntervalEdit->setFocus();
+        } else {
+            // Check if interval is smaller than max range
+            double maxRange = ui->tableMaxRangeEdit->text().toDouble(&ok);
+            if (ok && maxRange > 0 && val >= maxRange) {
+                QMessageBox::warning(this, "Invalid Input", "Interval must be smaller than maximum range.");
+                ui->tableIntervalEdit->setFocus();
+            }
+        }
+    });
+
+    connect(ui->zeroRangeEdit, &QLineEdit::editingFinished, this, [this]() {
+        bool ok;
+        double val = ui->zeroRangeEdit->text().toDouble(&ok);
+        if (!ok || val <= 0) {
+            QMessageBox::warning(this, "Invalid Input", "Zero range must be a positive number.");
+            ui->zeroRangeEdit->setFocus();
+        }
+    });
+
     updateUnitLabels();
 }
 
@@ -76,6 +167,112 @@ MainWindow::~MainWindow()
 }
 
 /**
+ * @brief Validates a single input field.
+ *
+ * Checks if the input can be converted to a double and is within the specified range.
+ *
+ * @param field The QLineEdit field to validate.
+ * @param value Reference to store the validated value.
+ * @param min The minimum allowed value.
+ * @param max The maximum allowed value.
+ * @return true if the input is valid, false otherwise.
+ */
+bool MainWindow::validateInput(QLineEdit* field, double& value, double min, double max) {
+    bool ok;
+    double val = field->text().toDouble(&ok);
+
+    if (!ok) {
+        QMessageBox::warning(this, "Invalid Input", QString("Invalid value in %1 field. Please enter a valid number.").arg(field->objectName()));
+        field->setFocus();
+        return false;
+    }
+
+    if (val < min) {
+        QMessageBox::warning(this, "Invalid Input", QString("Value in %1 field is too small. Minimum value is %2.").arg(field->objectName()).arg(min));
+        field->setFocus();
+        return false;
+    }
+
+    if (val > max) {
+        QMessageBox::warning(this, "Invalid Input", QString("Value in %1 field is too large. Maximum value is %2.").arg(field->objectName()).arg(max));
+        field->setFocus();
+        return false;
+    }
+
+    value = val;
+    return true;
+}
+
+/**
+ * @brief Validates all input fields.
+ *
+ * Checks all input fields for valid values before performing calculations.
+ *
+ * @return true if all inputs are valid, false otherwise.
+ */
+bool MainWindow::validateAllInputs() {
+    double temp;
+
+    // Validate mass
+    if (!validateInput(ui->massEdit, temp, 0.1)) return false;
+
+    // Validate diameter
+    if (!validateInput(ui->diameterEdit, temp, 0.001, 0.2)) return false;
+
+    // Validate muzzle velocity
+    if (!validateInput(ui->muzzleVelocityEdit, temp, 10.0)) return false;
+
+    // Validate launch angle (in degrees for user input)
+    bool ok;
+    double angleDeg = ui->launchAngleEdit->text().toDouble(&ok);
+    if (!ok) {
+        QMessageBox::warning(this, "Invalid Input", "Launch angle must be a valid number.");
+        ui->launchAngleEdit->setFocus();
+        return false;
+    }
+
+    // Launch angle should be between 0 and 90 degrees
+    if (angleDeg < 0 || angleDeg >= 90) {
+        QMessageBox::warning(this, "Invalid Input", "Launch angle must be between 0 and 90 degrees.");
+        ui->launchAngleEdit->setFocus();
+        return false;
+    }
+    // Validate wind speed
+    if (!validateInput(ui->windSpeedEdit, temp, 0.0)) return false;
+
+    // Validate wind direction (in degrees for user input)
+    double windDirDeg = ui->windDirectionEdit->text().toDouble(&ok);
+    if (!ok) {
+        QMessageBox::warning(this, "Invalid Input", "Wind direction must be a valid number.");
+        ui->windDirectionEdit->setFocus();
+        return false;
+    }
+
+    // Wind direction should be between 0 and 360 degrees
+    if (windDirDeg < 0 || windDirDeg >= 360) {
+        QMessageBox::warning(this, "Invalid Input", "Wind direction must be between 0 and 360 degrees.");
+        ui->windDirectionEdit->setFocus();
+        return false;
+    }
+
+    // Validate latitude
+    double latitude = ui->latitudeEdit->text().toDouble(&ok);
+    if (!ok || latitude < -90 || latitude > 90) {
+        QMessageBox::warning(this, "Invalid Input", "Latitude must be between -90 and 90 degrees.");
+        ui->latitudeEdit->setFocus();
+        return false;
+    }
+
+    // Validate scope height
+    if (!validateInput(ui->scopeHeightEdit, temp, 0.001, 0.5)) return false;
+
+    // Validate drag coefficient
+    if (!validateInput(ui->dragCoeffEdit, temp, 0.01, 5.0)) return false;
+
+    return true;
+}
+
+/**
  * @brief Handles changes to the drop unit selection.
  *
  * Updates the drop unit when the user selects a different unit from the combo box.
@@ -85,6 +282,7 @@ MainWindow::~MainWindow()
 void MainWindow::onDropUnitChanged(int index) {
     if (index < 0) return;
 
+    // No validation needed for drop unit change, just update
     dropUnit = ui->dropUnitComboBox->itemData(index).value<DropUnit>();
 
     // Regenerate the table if it exists
@@ -115,13 +313,15 @@ void MainWindow::generateTrajectoryTable() {
     bool ok;
     double maxRange = ui->tableMaxRangeEdit->text().toDouble(&ok);
     if (!ok || maxRange <= 0) {
-        QMessageBox::warning(this, "Error", "Please enter a valid maximum range.");
+        QMessageBox::warning(this, "Error", "Please enter a valid maximum range (must be positive).");
+        ui->tableMaxRangeEdit->setFocus();
         return;
     }
 
     double interval = ui->tableIntervalEdit->text().toDouble(&ok);
     if (!ok || interval <= 0) {
-        QMessageBox::warning(this, "Error", "Please enter a valid interval.");
+        QMessageBox::warning(this, "Error", "Please enter a valid interval (must be positive).");
+        ui->tableIntervalEdit->setFocus();
         return;
     }
 
@@ -131,12 +331,18 @@ void MainWindow::generateTrajectoryTable() {
         interval *= 0.9144; // yards to meters
     }
 
+    // Check if interval is smaller than maxRange
+    if (interval >= maxRange) {
+        QMessageBox::warning(this, "Error", "Interval must be smaller than maximum range.");
+        ui->tableIntervalEdit->setFocus();
+        return;
+    }
+
     populateTrajectoryTable(maxRange, interval);
 
     // Switch to the Trajectory Table tab
-    ui->tabWidget->setCurrentIndex(3); // Assuming this is the 4th tab (index 3)
+    ui->tabWidget->setCurrentIndex(3);
 }
-
 
 /**
  * @brief Calculates the zero angle for a given range.
@@ -148,7 +354,8 @@ void MainWindow::calculateZeroAngle() {
     bool ok;
     double range = ui->zeroRangeEdit->text().toDouble(&ok);
     if (!ok || range <= 0) {
-        QMessageBox::warning(this, "Error", "Please enter a valid range.");
+        QMessageBox::warning(this, "Error", "Please enter a valid range (must be positive).");
+        ui->zeroRangeEdit->setFocus();
         return;
     }
 
@@ -158,9 +365,6 @@ void MainWindow::calculateZeroAngle() {
     }
 
     calculateAndDisplayZeroAngle(range);
-
-    // Switch to the Input Parameters tab after calculation
-    ui->tabWidget->setCurrentIndex(0);
 }
 
 /**
@@ -598,8 +802,33 @@ void MainWindow::onAlgorithmChanged(int index) {
  * @param index The index of the selected unit system in the combo box.
  */
 void MainWindow::onUnitChanged(int index) {
-    useMetricUnits = (index == 0);
+    // Check if we're actually changing the unit system
+    bool newMetric = (index == 0);
+    if (newMetric == useMetricUnits) return;
+
+    // Validate current inputs before changing units
+    if (!validateAllInputs()) {
+        // Revert the combo box selection
+        ui->unitComboBox->setCurrentIndex(useMetricUnits ? 0 : 1);
+        return;
+    }
+
+    useMetricUnits = newMetric;
     updateUnitLabels();
+    updateZeroAngleLabels();
+}
+
+/**
+ * @brief Updates the zero angle labels based on the selected unit system.
+ *
+ * Changes the text of the zero angle labels to reflect either metric or imperial units.
+ */
+void MainWindow::updateZeroAngleLabels() {
+    if (useMetricUnits) {
+        ui->zeroRangeLabel->setText("Zero Range (m):");
+    } else {
+        ui->zeroRangeLabel->setText("Zero Range (yd):");
+    }
 }
 
 /**
@@ -729,7 +958,13 @@ double MainWindow::getDragCoefficientAtVelocity(const Bullet &bullet, double vel
  * Uses the selected ballistics model to calculate and display the bullet's trajectory.
  * Also switches to the Trajectory Visualization tab after calculation.
  */
-void MainWindow::calculateTrajectory() {
+void MainWindow::calculateTrajectory()
+{
+    // Validate all inputs before proceeding
+    if (!validateAllInputs()) {
+        return;
+    }
+
     int bulletIndex = ui->bulletComboBox->currentIndex();
     if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
         QMessageBox::warning(this, "Error", "Please select a bullet profile.");
@@ -822,7 +1057,7 @@ void MainWindow::plotTrajectory(const std::vector<std::array<double, 3>>& trajec
     // Add graph for the scope line (horizontal line at y=0)
     QVector<double> scopeX = x;
     QVector<double> scopeY;
-    for (size_t i = 0; i < x.size(); ++i) {
+    for (qsizetype i = 0; i < x.size(); ++i) {
         scopeY << 0;  // Scope line is at y=0 in the plot (which represents the scope height above barrel)
     }
     ui->plot->addGraph();

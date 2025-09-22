@@ -66,6 +66,7 @@ private:
     double convertToMetric(double value, const QString &unitType);
     double convertFromMetric(double value, const QString &unitType);
     void updateUnitLabels();
+    void updateZeroAngleLabels();
     void saveProfileToJson(const QString &fileName);
     void loadProfileFromJson(const QString &fileName);
     void populateBulletComboBox();
@@ -76,5 +77,8 @@ private:
     double convertDropToDisplayUnit(double drop, double range) const;
     double moaToMeters(double moa, double range) const;
     double milToMeters(double mil, double range) const;
+    bool validateInput(QLineEdit* field, double& value, double min = 0.0, double max = std::numeric_limits<double>::max());
+    bool validateAllInputs();
+
 };
 #endif // MAINWINDOW_H
