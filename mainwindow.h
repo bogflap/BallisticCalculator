@@ -5,6 +5,7 @@
 
 #include "ui_mainwindow.h"
 #include "bulletdata.h"
+#include "inputvalidator.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -77,8 +78,8 @@ private:
     double convertDropToDisplayUnit(double drop, double range) const;
     double moaToMeters(double moa, double range) const;
     double milToMeters(double mil, double range) const;
-    bool validateInput(QLineEdit* field, double& value, double min = 0.0, double max = std::numeric_limits<double>::max());
+    bool validateInput(QLineEdit* field, double& value, const std::string& fieldName);
     bool validateAllInputs();
-
+    void setupInputValidators();
 };
 #endif // MAINWINDOW_H

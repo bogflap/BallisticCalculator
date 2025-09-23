@@ -28,6 +28,7 @@ HEADERS += \
     bulletdata.h \
     dof3.h \
     dof6.h \
+    inputvalidator.h \
     mainwindow.h \
     modifiedeuler.h \
     modifiedpointmass.h \
@@ -43,3 +44,6 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    resources.qrc

@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>config/input_validation_rules.json</file>
+        <file>BulletData/BulletCoefficents.json</file>
+    </qresource>
+</RCC>

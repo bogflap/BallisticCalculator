@@ -1,6 +1,10 @@
 # This file is used to ignore files which are generated
 # ----------------------------------------------------------------------------
 
+# Added by self
+GitCommands.txt
+# End added by self
+
 *~
 *.autosave
 *.a
