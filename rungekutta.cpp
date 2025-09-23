@@ -99,34 +99,61 @@ double RungeKutta::calculateDrag(double velocity) const {
 /**
  * @brief Defines the system of differential equations for the bullet's motion.
  *
- * This lambda function represents the system of ODEs that describe the
- * bullet's motion. It takes the current state and returns the derivatives.
+ * This function represents the system of ODEs that describe the bullet's motion,
+ * including altitude-dependent air density and distance-dependent wind effects.
  *
  * @param s The current state vector (x, y, vx, vy, t).
  * @return The derivatives of the state vector (dx/dt, dy/dt, dvx/dt, dvy/dt, dt/dt).
  */
 std::array<double, 5> RungeKutta::getDerivatives(const std::array<double, 5> &s) const {
-    // Extract components from the state vector
-    double x = s[0];
-    double y = s[1];
+    double x = s[0];  // Horizontal position (m)
+    double y = s[1];  // Vertical position/altitude (m)
     double vx = s[2];
     double vy = s[3];
 
     // Calculate velocity magnitude
     double v = sqrt(vx * vx + vy * vy);
 
-    // Calculate drag force
-    double dragForce = calculateDrag(v);
+    // Calculate air density based on altitude (y)
+    // Using the barometric formula: ρ = ρ₀ * e^(-y/H)
+    const double seaLevelDensity = 1.225;  // kg/m³
+    const double scaleHeight = 8500.0;    // meters
+
+    // Ensure y is not negative (below sea level) for density calculation
+    double altitude = std::max(y, 0.0);
+    double airDensity = seaLevelDensity * exp(-altitude / scaleHeight);
+
+    // Calculate cross-sectional area of the bullet
+    double area = M_PI * diameter * diameter / 4.0;
+
+    // Calculate drag force using altitude-dependent air density
+    double dragForce = 0.5 * airDensity * v * v * dragCoeff * area;
 
     // Calculate drag acceleration in x and y directions
     double dragAx = -(dragForce / mass) * (vx / v);
     double dragAy = -(dragForce / mass) * (vy / v);
 
-    // Wind components
-    double windX = windSpeed * cos(windDirection);
-    double windY = windSpeed * sin(windDirection);
+    // Wind components with distance-dependent variation
+    // Model wind as potentially changing with distance (x)
+    // Using a simple model where wind speed can vary linearly with distance
+    const double windVariationFactor = 0.0001;  // Small factor for wind variation with distance
+    double distanceDependentWindSpeed = windSpeed * (1.0 + windVariationFactor * x);
 
-    // Define the derivatives
+    // Calculate wind components using the distance-dependent wind speed
+    double windX = distanceDependentWindSpeed * cos(windDirection);
+    double windY = distanceDependentWindSpeed * sin(windDirection);
+
+    // Add a small vertical wind component that varies with altitude
+    // This simulates thermal effects or altitude-dependent wind patterns
+    const double thermalEffectFactor = 0.00005;  // Small factor for altitude-dependent vertical wind
+    windY += thermalEffectFactor * altitude;
+
+    // Define the derivatives:
+    // dx/dt = vx (horizontal velocity)
+    // dy/dt = vy (vertical velocity)
+    // dvx/dt = dragAx + windX (horizontal acceleration)
+    // dvy/dt = -g + dragAy + windY (vertical acceleration, including gravity)
+    // dt/dt = 1 (time always increases at 1 second per second)
     return std::array<double, 5>{
         vx,                          // dx/dt
         vy,                          // dy/dt
