@@ -61,80 +61,92 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->generateTableButton, &QPushButton::clicked, this, &MainWindow::generateTrajectoryTable);
     connect(ui->dropUnitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDropUnitChanged);
 
-    // In MainWindow constructor, replace the individual connections with:
+    // In MainWindow constructor, update the connections to handle empty fields
     connect(ui->massEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        validateInput(ui->massEdit, temp, "mass");
+        validateInput(ui->massEdit, temp, "mass", true);
     });
 
     connect(ui->diameterEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        validateInput(ui->diameterEdit, temp, "diameter");
+        validateInput(ui->diameterEdit, temp, "diameter", true);
     });
 
     connect(ui->muzzleVelocityEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity");
+        if (!validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity", false)) {
+            ui->muzzleVelocityEdit->setFocus();
+        }
     });
 
     connect(ui->launchAngleEdit, &QLineEdit::editingFinished, this, [this]() {
-        bool ok;
-        double angleDeg = ui->launchAngleEdit->text().toDouble(&ok);
-        if (!ok || !InputValidator::getInstance().isValid("launchAngle", angleDeg)) {
-            auto range = InputValidator::getInstance().getValidationRange("launchAngle");
-            QMessageBox::warning(this, "Invalid Input",
-                                 QString("Launch angle must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
-            ui->launchAngleEdit->setFocus();
+        QString text = ui->launchAngleEdit->text().trimmed();
+        if (!text.isEmpty()) {
+            bool ok;
+            double angleDeg = text.toDouble(&ok);
+            if (!ok || !InputValidator::getInstance().isValid("launchAngle", angleDeg, true, false)) {
+                auto range = InputValidator::getInstance().getValidationRange("launchAngle", true);
+                QMessageBox::warning(this, "Invalid Input",
+                                     QString("Launch angle must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
+                ui->launchAngleEdit->setFocus();
+            }
         }
     });
 
     connect(ui->windSpeedEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        validateInput(ui->windSpeedEdit, temp, "windSpeed");
+        validateInput(ui->windSpeedEdit, temp, "windSpeed", true);
     });
 
     connect(ui->windDirectionEdit, &QLineEdit::editingFinished, this, [this]() {
-        bool ok;
-        double windDirDeg = ui->windDirectionEdit->text().toDouble(&ok);
-        if (!ok || !InputValidator::getInstance().isValid("windDirection", windDirDeg)) {
-            auto range = InputValidator::getInstance().getValidationRange("windDirection");
-            QMessageBox::warning(this, "Invalid Input",
-                                 QString("Wind direction must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
-            ui->windDirectionEdit->setFocus();
+        QString text = ui->windDirectionEdit->text().trimmed();
+        if (!text.isEmpty()) {
+            bool ok;
+            double windDirDeg = text.toDouble(&ok);
+            if (!ok || !InputValidator::getInstance().isValid("windDirection", windDirDeg, true, false)) {
+                auto range = InputValidator::getInstance().getValidationRange("windDirection", true);
+                QMessageBox::warning(this, "Invalid Input",
+                                     QString("Wind direction must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
+                ui->windDirectionEdit->setFocus();
+            }
         }
     });
 
     connect(ui->latitudeEdit, &QLineEdit::editingFinished, this, [this]() {
-        bool ok;
-        double latitude = ui->latitudeEdit->text().toDouble(&ok);
-        if (!ok || !InputValidator::getInstance().isValid("latitude", latitude)) {
-            auto range = InputValidator::getInstance().getValidationRange("latitude");
-            QMessageBox::warning(this, "Invalid Input",
-                                 QString("Latitude must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
-            ui->latitudeEdit->setFocus();
+        QString text = ui->latitudeEdit->text().trimmed();
+        if (!text.isEmpty()) {
+            bool ok;
+            double latitude = text.toDouble(&ok);
+            if (!ok || !InputValidator::getInstance().isValid("latitude", latitude, true, false)) {
+                auto range = InputValidator::getInstance().getValidationRange("latitude", true);
+                QMessageBox::warning(this, "Invalid Input",
+                                     QString("Latitude must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
+                ui->latitudeEdit->setFocus();
+            }
         }
     });
 
     connect(ui->scopeHeightEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        validateInput(ui->scopeHeightEdit, temp, "scopeHeight");
+        validateInput(ui->scopeHeightEdit, temp, "scopeHeight", true);
     });
 
     connect(ui->dragCoeffEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        validateInput(ui->dragCoeffEdit, temp, "dragCoefficient");
+        validateInput(ui->dragCoeffEdit, temp, "dragCoefficient", true);
     });
 
+    // For table parameters, we might want to keep them required
     connect(ui->tableMaxRangeEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        if (!validateInput(ui->tableMaxRangeEdit, temp, "tableMaxRange")) {
+        if (!validateInput(ui->tableMaxRangeEdit, temp, "tableMaxRange", false)) {
             ui->tableMaxRangeEdit->setFocus();
         }
     });
 
     connect(ui->tableIntervalEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        if (!validateInput(ui->tableIntervalEdit, temp, "tableInterval")) {
+        if (!validateInput(ui->tableIntervalEdit, temp, "tableInterval", false)) {
             ui->tableIntervalEdit->setFocus();
             return;
         }
@@ -152,7 +164,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->zeroRangeEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
-        if (!validateInput(ui->zeroRangeEdit, temp, "zeroRange")) {
+        if (!validateInput(ui->zeroRangeEdit, temp, "zeroRange", false)) {
             ui->zeroRangeEdit->setFocus();
         }
     });
@@ -186,11 +198,19 @@ void MainWindow::setupInputValidators() {
  * @param field The QLineEdit field to validate.
  * @param value Reference to store the validated value.
  * @param fieldName The name of the field for validation.
+ * @param allowEmpty If true, empty fields are considered valid.
  * @return true if the input is valid, false otherwise.
  */
-bool MainWindow::validateInput(QLineEdit* field, double& value, const std::string& fieldName) {
+bool MainWindow::validateInput(QLineEdit* field, double& value, const std::string& fieldName, bool allowEmpty) {
+    QString text = field->text().trimmed();
+
+    // If the field is empty and empty is allowed, return true
+    if (allowEmpty && text.isEmpty()) {
+        return true;
+    }
+
     bool ok;
-    double val = field->text().toDouble(&ok);
+    double val = text.toDouble(&ok);
 
     if (!ok) {
         QString description = QString::fromStdString(InputValidator::getInstance().getFieldDescription(fieldName));
@@ -202,29 +222,16 @@ bool MainWindow::validateInput(QLineEdit* field, double& value, const std::strin
         return false;
     }
 
-    // Get validation range from the singleton
-    auto range = InputValidator::getInstance().getValidationRange(fieldName);
-    double min = range.first;
-    double max = range.second;
-
-    if (val < min) {
+    // Check if the value is valid using the current unit system
+    if (!InputValidator::getInstance().isValid(fieldName, val, useMetricUnits, allowEmpty)) {
+        auto range = InputValidator::getInstance().getValidationRange(fieldName, useMetricUnits);
         QString description = QString::fromStdString(InputValidator::getInstance().getFieldDescription(fieldName));
         QMessageBox::warning(this, "Invalid Input",
-                             QString("Value in %1 field is too small.\n%2\nMinimum value is %3.")
+                             QString("Value in %1 field is out of range.\n%2\nValid range is %3 to %4.")
                                  .arg(field->objectName())
                                  .arg(description.isEmpty() ? "" : QString("(%1) ").arg(description))
-                                 .arg(min));
-        field->setFocus();
-        return false;
-    }
-
-    if (val > max) {
-        QString description = QString::fromStdString(InputValidator::getInstance().getFieldDescription(fieldName));
-        QMessageBox::warning(this, "Invalid Input",
-                             QString("Value in %1 field is too large.\n%2\nMaximum value is %3.")
-                                 .arg(field->objectName())
-                                 .arg(description.isEmpty() ? "" : QString("(%1) ").arg(description))
-                                 .arg(max));
+                                 .arg(range.first)
+                                 .arg(range.second));
         field->setFocus();
         return false;
     }
@@ -232,7 +239,6 @@ bool MainWindow::validateInput(QLineEdit* field, double& value, const std::strin
     value = val;
     return true;
 }
-
 
 /**
  * @brief Validates all input fields using the InputValidator singleton.
@@ -242,54 +248,63 @@ bool MainWindow::validateInput(QLineEdit* field, double& value, const std::strin
 bool MainWindow::validateAllInputs() {
     double temp;
 
-    // Validate mass
-    if (!validateInput(ui->massEdit, temp, "mass")) return false;
+    // Validate mass (not required)
+    validateInput(ui->massEdit, temp, "mass", true);
 
-    // Validate diameter
-    if (!validateInput(ui->diameterEdit, temp, "diameter")) return false;
+    // Validate diameter (not required)
+    validateInput(ui->diameterEdit, temp, "diameter", true);
 
-    // Validate muzzle velocity
-    if (!validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity")) return false;
+    // Validate muzzle velocity (required)
+    if (!validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity", false)) return false;
 
-    // Validate launch angle (in degrees for user input)
+    // Validate launch angle (not required)
     bool ok;
-    double angleDeg = ui->launchAngleEdit->text().toDouble(&ok);
-    if (!ok || !InputValidator::getInstance().isValid("launchAngle", angleDeg)) {
-        auto range = InputValidator::getInstance().getValidationRange("launchAngle");
-        QMessageBox::warning(this, "Invalid Input",
-                             QString("Launch angle must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
-        ui->launchAngleEdit->setFocus();
-        return false;
+    QString angleText = ui->launchAngleEdit->text().trimmed();
+    if (!angleText.isEmpty()) {
+        double angleDeg = angleText.toDouble(&ok);
+        if (!ok || !InputValidator::getInstance().isValid("launchAngle", angleDeg, true, false)) {
+            auto range = InputValidator::getInstance().getValidationRange("launchAngle", true);
+            QMessageBox::warning(this, "Invalid Input",
+                                 QString("Launch angle must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
+            ui->launchAngleEdit->setFocus();
+            return false;
+        }
     }
 
-    // Validate wind speed
-    if (!validateInput(ui->windSpeedEdit, temp, "windSpeed")) return false;
+    // Validate wind speed (not required)
+    validateInput(ui->windSpeedEdit, temp, "windSpeed", true);
 
-    // Validate wind direction (in degrees for user input)
-    double windDirDeg = ui->windDirectionEdit->text().toDouble(&ok);
-    if (!ok || !InputValidator::getInstance().isValid("windDirection", windDirDeg)) {
-        auto range = InputValidator::getInstance().getValidationRange("windDirection");
-        QMessageBox::warning(this, "Invalid Input",
-                             QString("Wind direction must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
-        ui->windDirectionEdit->setFocus();
-        return false;
+    // Validate wind direction (not required)
+    QString windDirText = ui->windDirectionEdit->text().trimmed();
+    if (!windDirText.isEmpty()) {
+        double windDirDeg = windDirText.toDouble(&ok);
+        if (!ok || !InputValidator::getInstance().isValid("windDirection", windDirDeg, true, false)) {
+            auto range = InputValidator::getInstance().getValidationRange("windDirection", true);
+            QMessageBox::warning(this, "Invalid Input",
+                                 QString("Wind direction must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
+            ui->windDirectionEdit->setFocus();
+            return false;
+        }
     }
 
-    // Validate latitude
-    double latitude = ui->latitudeEdit->text().toDouble(&ok);
-    if (!ok || !InputValidator::getInstance().isValid("latitude", latitude)) {
-        auto range = InputValidator::getInstance().getValidationRange("latitude");
-        QMessageBox::warning(this, "Invalid Input",
-                             QString("Latitude must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
-        ui->latitudeEdit->setFocus();
-        return false;
+    // Validate latitude (not required)
+    QString latitudeText = ui->latitudeEdit->text().trimmed();
+    if (!latitudeText.isEmpty()) {
+        double latitude = latitudeText.toDouble(&ok);
+        if (!ok || !InputValidator::getInstance().isValid("latitude", latitude, true, false)) {
+            auto range = InputValidator::getInstance().getValidationRange("latitude", true);
+            QMessageBox::warning(this, "Invalid Input",
+                                 QString("Latitude must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
+            ui->latitudeEdit->setFocus();
+            return false;
+        }
     }
 
-    // Validate scope height
-    if (!validateInput(ui->scopeHeightEdit, temp, "scopeHeight")) return false;
+    // Validate scope height (not required)
+    validateInput(ui->scopeHeightEdit, temp, "scopeHeight", true);
 
-    // Validate drag coefficient
-    if (!validateInput(ui->dragCoeffEdit, temp, "dragCoefficient")) return false;
+    // Validate drag coefficient (not required)
+    validateInput(ui->dragCoeffEdit, temp, "dragCoefficient", true);
 
     return true;
 }
@@ -329,15 +344,15 @@ void MainWindow::onDropUnitChanged(int index) {
 void MainWindow::generateTrajectoryTable() {
     double temp;
 
-    // Validate max range
-    if (!validateInput(ui->tableMaxRangeEdit, temp, "tableMaxRange")) {
+    // Validate max range (required)
+    if (!validateInput(ui->tableMaxRangeEdit, temp, "tableMaxRange", false)) {
         ui->tableMaxRangeEdit->setFocus();
         return;
     }
     double maxRange = temp;
 
-    // Validate interval
-    if (!validateInput(ui->tableIntervalEdit, temp, "tableInterval")) {
+    // Validate interval (required)
+    if (!validateInput(ui->tableIntervalEdit, temp, "tableInterval", false)) {
         ui->tableIntervalEdit->setFocus();
         return;
     }
@@ -362,11 +377,12 @@ void MainWindow::generateTrajectoryTable() {
     ui->tabWidget->setCurrentIndex(3);
 }
 
+
 void MainWindow::calculateZeroAngle() {
     double temp;
 
-    // Validate zero range
-    if (!validateInput(ui->zeroRangeEdit, temp, "zeroRange")) {
+    // Validate zero range (required)
+    if (!validateInput(ui->zeroRangeEdit, temp, "zeroRange", false)) {
         ui->zeroRangeEdit->setFocus();
         return;
     }
@@ -975,6 +991,13 @@ void MainWindow::calculateTrajectory()
 {
     // Validate all inputs before proceeding
     if (!validateAllInputs()) {
+        return;
+    }
+
+    // Check if required fields are filled
+    if (ui->muzzleVelocityEdit->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "Error", "Muzzle velocity is required.");
+        ui->muzzleVelocityEdit->setFocus();
         return;
     }
 

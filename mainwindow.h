@@ -78,7 +78,7 @@ private:
     double convertDropToDisplayUnit(double drop, double range) const;
     double moaToMeters(double moa, double range) const;
     double milToMeters(double mil, double range) const;
-    bool validateInput(QLineEdit* field, double& value, const std::string& fieldName);
+    bool validateInput(QLineEdit* field, double& value, const std::string& fieldName, bool allowEmpty = true);
     bool validateAllInputs();
     void setupInputValidators();
 };
