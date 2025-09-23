@@ -18,7 +18,7 @@ public:
 private:
     std::vector<std::array<double, 3>> trajectory;
     double mass, diameter, dragCoeff, muzzleVelocity, launchAngle;
-    double windSpeed, windDirection, latitude, scopeHeight;
+    double windSpeed, windDirection, latitude;
     double currentTime, currentX, currentY;
     double ballisticCoefficient;
 };
