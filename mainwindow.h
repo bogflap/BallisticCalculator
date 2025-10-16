@@ -46,6 +46,7 @@ private slots:
     void generateTrajectoryTable();
     void onDropUnitChanged(int index);
     void onExitButtonClicked();
+    void onActionExitTriggered();
 
 protected:
     void closeEvent(QCloseEvent *event) override;

@@ -61,8 +61,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->generateTableButton, &QPushButton::clicked, this, &MainWindow::generateTrajectoryTable);
     connect(ui->dropUnitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDropUnitChanged);
     connect(ui->exitButton, &QPushButton::clicked, this, &MainWindow::onExitButtonClicked);
+    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::onActionExitTriggered);
 
-    // In MainWindow constructor, update the connections to handle empty fields
     connect(ui->massEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
         validateInput(ui->massEdit, temp, "mass", true);
@@ -183,6 +183,15 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+/**
+ * @brief Handles the exit action triggered event.
+ *
+ * Prompts the user to confirm exit and closes the application if confirmed.
+ */
+void MainWindow::onActionExitTriggered() {
+    onExitButtonClicked(); // Reuse the same function as the exit button
 }
 
 /**
