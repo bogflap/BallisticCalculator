@@ -28,6 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
     , useMetricUnits(true)
     , scopeHeight(0.038)  // Default scope height in meters (38mm)
+    , hasUnsavedChanges(false)
     , dropUnit(DropUnit::Inches)
 {
     ui->setupUi(this);
@@ -66,17 +67,20 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->massEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
         validateInput(ui->massEdit, temp, "mass", true);
+        hasUnsavedChanges = true;
     });
 
     connect(ui->diameterEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
         validateInput(ui->diameterEdit, temp, "diameter", true);
+        hasUnsavedChanges = true;
     });
 
     connect(ui->muzzleVelocityEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
         if (!validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity", false)) {
             ui->muzzleVelocityEdit->setFocus();
+            hasUnsavedChanges = true;
         }
     });
 
@@ -90,6 +94,7 @@ MainWindow::MainWindow(QWidget *parent)
                 QMessageBox::warning(this, "Invalid Input",
                                      QString("Launch angle must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
                 ui->launchAngleEdit->setFocus();
+                hasUnsavedChanges = true;
             }
         }
     });
@@ -97,6 +102,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->windSpeedEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
         validateInput(ui->windSpeedEdit, temp, "windSpeed", true);
+        hasUnsavedChanges = true;
     });
 
     connect(ui->windDirectionEdit, &QLineEdit::editingFinished, this, [this]() {
@@ -110,6 +116,7 @@ MainWindow::MainWindow(QWidget *parent)
                                      QString("Wind direction must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
                 ui->windDirectionEdit->setFocus();
             }
+            hasUnsavedChanges = true;
         }
     });
 
@@ -124,17 +131,20 @@ MainWindow::MainWindow(QWidget *parent)
                                      QString("Latitude must be between %1 and %2 degrees.").arg(range.first).arg(range.second));
                 ui->latitudeEdit->setFocus();
             }
+            hasUnsavedChanges = true;
         }
     });
 
     connect(ui->scopeHeightEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
         validateInput(ui->scopeHeightEdit, temp, "scopeHeight", true);
+        hasUnsavedChanges = true;
     });
 
     connect(ui->dragCoeffEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
         validateInput(ui->dragCoeffEdit, temp, "dragCoefficient", true);
+        hasUnsavedChanges = true;
     });
 
     // For table parameters, we might want to keep them required
@@ -142,6 +152,7 @@ MainWindow::MainWindow(QWidget *parent)
         double temp;
         if (!validateInput(ui->tableMaxRangeEdit, temp, "tableMaxRange", false)) {
             ui->tableMaxRangeEdit->setFocus();
+            hasUnsavedChanges = true;
         }
     });
 
@@ -160,6 +171,7 @@ MainWindow::MainWindow(QWidget *parent)
         if (ok && maxRange > 0 && interval >= maxRange) {
             QMessageBox::warning(this, "Invalid Input", "Interval must be smaller than maximum range.");
             ui->tableIntervalEdit->setFocus();
+            hasUnsavedChanges = true;
         }
     });
 
@@ -167,6 +179,7 @@ MainWindow::MainWindow(QWidget *parent)
         double temp;
         if (!validateInput(ui->zeroRangeEdit, temp, "zeroRange", false)) {
             ui->zeroRangeEdit->setFocus();
+            hasUnsavedChanges = true;
         }
     });
 
@@ -200,6 +213,20 @@ void MainWindow::onActionExitTriggered() {
  * Prompts the user to confirm exit and closes the application if confirmed.
  */
 void MainWindow::onExitButtonClicked() {
+    if (hasUnsavedChanges) {
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, "Unsaved Changes",
+                                      "You have unsaved changes. Do you want to save before exiting?",
+                                      QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel);
+
+        if (reply == QMessageBox::Cancel) {
+            return;
+        } else if (reply == QMessageBox::Yes) {
+            // Call your save function here
+            // saveProfile();
+        }
+    }
+
     QMessageBox::StandardButton reply;
     reply = QMessageBox::question(this, "Exit", "Are you sure you want to exit?",
                                   QMessageBox::Yes|QMessageBox::No);
@@ -217,6 +244,20 @@ void MainWindow::onExitButtonClicked() {
  * @param event The close event.
  */
 void MainWindow::closeEvent(QCloseEvent *event) {
+    if (hasUnsavedChanges) {
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, "Unsaved Changes",
+                                      "You have unsaved changes. Do you want to save before exiting?",
+                                      QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel);
+
+        if (reply == QMessageBox::Cancel) {
+            event->ignore();
+            return;
+        } else if (reply == QMessageBox::Yes) {
+            saveProfile();
+        }
+    }
+
     QMessageBox::StandardButton reply;
     reply = QMessageBox::question(this, "Exit", "Are you sure you want to exit?",
                                   QMessageBox::Yes|QMessageBox::No);
@@ -1315,6 +1356,7 @@ void MainWindow::saveProfile() {
     QString fileName = QFileDialog::getSaveFileName(this, "Save Profile", "", "JSON Files (*.json)");
     if (fileName.isEmpty()) return;
     saveProfileToJson(fileName);
+    hasUnsavedChanges = false;
 }
 
 /**

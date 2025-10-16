@@ -58,6 +58,7 @@ private:
     BallisticsAlgorithm currentAlgorithm;
     std::vector<Bullet> bulletDatabase;
     double scopeHeight;  // Height of the scope above the barrel in meters
+    bool hasUnsavedChanges;
 
 private:
     enum class DropUnit {
