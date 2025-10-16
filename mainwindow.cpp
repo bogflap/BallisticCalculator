@@ -60,6 +60,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->calculateZeroButton, &QPushButton::clicked, this, &MainWindow::calculateZeroAngle);
     connect(ui->generateTableButton, &QPushButton::clicked, this, &MainWindow::generateTrajectoryTable);
     connect(ui->dropUnitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDropUnitChanged);
+    connect(ui->exitButton, &QPushButton::clicked, this, &MainWindow::onExitButtonClicked);
 
     // In MainWindow constructor, update the connections to handle empty fields
     connect(ui->massEdit, &QLineEdit::editingFinished, this, [this]() {
@@ -182,6 +183,40 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+/**
+ * @brief Handles the exit button click event.
+ *
+ * Prompts the user to confirm exit and closes the application if confirmed.
+ */
+void MainWindow::onExitButtonClicked() {
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Exit", "Are you sure you want to exit?",
+                                  QMessageBox::Yes|QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        QApplication::quit();
+    }
+}
+
+/**
+ * @brief Handles the close event when the user tries to close the window.
+ *
+ * Prompts the user to confirm exit and accepts or ignores the close event based on the user's choice.
+ *
+ * @param event The close event.
+ */
+void MainWindow::closeEvent(QCloseEvent *event) {
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Exit", "Are you sure you want to exit?",
+                                  QMessageBox::Yes|QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        event->accept();
+    } else {
+        event->ignore();
+    }
 }
 
 /**
@@ -308,6 +343,7 @@ bool MainWindow::validateAllInputs() {
 
     return true;
 }
+
 
 /**
  * @brief Handles changes to the drop unit selection.
@@ -981,23 +1017,9 @@ double MainWindow::getDragCoefficientAtVelocity(const Bullet &bullet, double vel
     return closestCd;
 }
 
-/**
- * @brief Calculates the bullet trajectory based on input parameters.
- *
- * Uses the selected ballistics model to calculate and display the bullet's trajectory.
- * Also switches to the Trajectory Visualization tab after calculation.
- */
-void MainWindow::calculateTrajectory()
-{
+void MainWindow::calculateTrajectory() {
     // Validate all inputs before proceeding
     if (!validateAllInputs()) {
-        return;
-    }
-
-    // Check if required fields are filled
-    if (ui->muzzleVelocityEdit->text().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Error", "Muzzle velocity is required.");
-        ui->muzzleVelocityEdit->setFocus();
         return;
     }
 
@@ -1016,16 +1038,67 @@ void MainWindow::calculateTrajectory()
     }
 
     Bullet selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
-    double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
-    double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
-    double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
-    double launchAngle = ui->launchAngleEdit->text().toDouble();
-    double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
-    double windDirection = ui->windDirectionEdit->text().toDouble();
-    double latitude = ui->latitudeEdit->text().toDouble();
 
-    // Get drag coefficient based on selected model
-    double dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
+    // Get mass with fallback to bullet profile if empty
+    double mass;
+    if (ui->massEdit->text().trimmed().isEmpty()) {
+        mass = convertToMetric(selectedBullet.weight_g, "mass");
+    } else {
+        mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
+    }
+
+    // Get diameter with fallback to bullet profile if empty
+    double diameter;
+    if (ui->diameterEdit->text().trimmed().isEmpty()) {
+        diameter = convertToMetric(selectedBullet.diameter_mm / 1000.0, "length");
+    } else {
+        diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
+    }
+
+    // Get muzzle velocity - required field
+    if (ui->muzzleVelocityEdit->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "Error", "Muzzle velocity is required.");
+        ui->muzzleVelocityEdit->setFocus();
+        return;
+    }
+    double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
+
+    // Get launch angle (default to 0 if empty)
+    double launchAngle = 0.0;
+    if (!ui->launchAngleEdit->text().trimmed().isEmpty()) {
+        launchAngle = ui->launchAngleEdit->text().toDouble() * M_PI / 180.0;  // Convert degrees to radians
+    }
+
+    // Get wind speed (default to 0 if empty)
+    double windSpeed = 0.0;
+    if (!ui->windSpeedEdit->text().trimmed().isEmpty()) {
+        windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
+    }
+
+    // Get wind direction (default to 0 if empty)
+    double windDirection = 0.0;
+    if (!ui->windDirectionEdit->text().trimmed().isEmpty()) {
+        windDirection = ui->windDirectionEdit->text().toDouble() * M_PI / 180.0;  // Convert degrees to radians
+    }
+
+    // Get latitude (default to 0 if empty)
+    double latitude = 0.0;
+    if (!ui->latitudeEdit->text().trimmed().isEmpty()) {
+        latitude = ui->latitudeEdit->text().toDouble() * M_PI / 180.0;  // Convert degrees to radians
+    }
+
+    // Get drag coefficient with fallback to default if empty
+    double dragCoeff;
+    if (ui->dragCoeffEdit->text().trimmed().isEmpty()) {
+        // Use a default drag coefficient if not specified
+        dragCoeff = 0.5;  // Default value
+    } else {
+        dragCoeff = ui->dragCoeffEdit->text().toDouble();
+    }
+
+    // If drag coefficient is from bullet profile, use that
+    // This would require checking if the bullet has a drag coefficient defined
+    // For now, we'll use the value from the UI or the default
 
     delete ballisticsModel;
     switch (currentAlgorithm) {
@@ -1051,6 +1124,9 @@ void MainWindow::calculateTrajectory()
         ballisticsModel = new Pejsa();
         break;
     }
+
+    // Get drag coefficient based on selected model
+    dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
 
     // Pass scopeHeight to setParameters
     ballisticsModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle,

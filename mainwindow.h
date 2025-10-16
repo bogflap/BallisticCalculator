@@ -45,6 +45,10 @@ private slots:
     void calculateZeroAngle();
     void generateTrajectoryTable();
     void onDropUnitChanged(int index);
+    void onExitButtonClicked();
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 
 private:
     Ui::MainWindow *ui;
