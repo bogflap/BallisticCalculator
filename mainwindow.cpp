@@ -67,8 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->calculateZeroButton, &QPushButton::clicked, this, &MainWindow::calculateZeroAngle);
     connect(ui->generateTableButton, &QPushButton::clicked, this, &MainWindow::generateTrajectoryTable);
     connect(ui->dropUnitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onDropUnitChanged);
-    connect(ui->exitButton, &QPushButton::clicked, this, &MainWindow::onExitButtonClicked);
-    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::onActionExitTriggered);
+    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::close);
 
     connect(ui->massEdit, &QLineEdit::editingFinished, this, [this]() {
         double temp;
@@ -382,45 +381,6 @@ void MainWindow::setupTooltips() {
     ui->loadBulletDataButton->setToolTip("Load bullet data from a JSON file");
     ui->calculateZeroButton->setToolTip("Calculate the zero angle for the specified range");
     ui->generateTableButton->setToolTip("Generate a trajectory table with the specified parameters");
-    ui->exitButton->setToolTip("Exit the application");
-}
-
-/**
- * @brief Handles the exit action triggered event.
- *
- * Prompts the user to confirm exit and closes the application if confirmed.
- */
-void MainWindow::onActionExitTriggered() {
-    onExitButtonClicked(); // Reuse the same function as the exit button
-}
-
-/**
- * @brief Handles the exit button click event.
- *
- * Prompts the user to confirm exit and closes the application if confirmed.
- */
-void MainWindow::onExitButtonClicked() {
-    if (hasUnsavedChanges) {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, "Unsaved Changes",
-                                      "You have unsaved changes. Do you want to save before exiting?",
-                                      QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel);
-
-        if (reply == QMessageBox::Cancel) {
-            return;
-        } else if (reply == QMessageBox::Yes) {
-            // Call your save function here
-            // saveProfile();
-        }
-    }
-
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, "Exit", "Are you sure you want to exit?",
-                                  QMessageBox::Yes|QMessageBox::No);
-
-    if (reply == QMessageBox::Yes) {
-        QApplication::quit();
-    }
 }
 
 /**
@@ -431,6 +391,7 @@ void MainWindow::onExitButtonClicked() {
  * @param event The close event.
  */
 void MainWindow::closeEvent(QCloseEvent *event) {
+    // Check for unsaved changes if needed
     if (hasUnsavedChanges) {
         QMessageBox::StandardButton reply;
         reply = QMessageBox::question(this, "Unsaved Changes",
@@ -441,19 +402,13 @@ void MainWindow::closeEvent(QCloseEvent *event) {
             event->ignore();
             return;
         } else if (reply == QMessageBox::Yes) {
-            saveProfile();
+            // Call your save function here
+            // saveProfile();
         }
     }
 
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, "Exit", "Are you sure you want to exit?",
-                                  QMessageBox::Yes|QMessageBox::No);
-
-    if (reply == QMessageBox::Yes) {
-        event->accept();
-    } else {
-        event->ignore();
-    }
+    // If no unsaved changes or user confirmed, close the application
+    event->accept();
 }
 
 /**

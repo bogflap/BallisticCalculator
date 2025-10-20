@@ -44,8 +44,6 @@ private slots:
     void calculateZeroAngle();
     void generateTrajectoryTable();
     void onDropUnitChanged(int index);
-    void onExitButtonClicked();
-    void onActionExitTriggered();
     void validateInputsAndUpdateCalculateButton();
     void onInputFieldChanged();
     void onDragModelChanged(int index);
