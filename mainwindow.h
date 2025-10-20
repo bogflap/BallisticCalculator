@@ -47,6 +47,8 @@ private slots:
     void onDropUnitChanged(int index);
     void onExitButtonClicked();
     void onActionExitTriggered();
+    void validateInputsAndUpdateCalculateButton();
+    void onInputFieldChanged();
 
 protected:
     void closeEvent(QCloseEvent *event) override;

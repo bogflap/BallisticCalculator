@@ -183,6 +183,25 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
+
+    // Connect input field changes to validation
+    connect(ui->massEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+    connect(ui->diameterEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+    connect(ui->muzzleVelocityEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+    connect(ui->scopeHeightEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+
+    // Also connect other fields that might affect validation
+    connect(ui->launchAngleEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+    connect(ui->windSpeedEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+    connect(ui->windDirectionEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+    connect(ui->latitudeEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+    connect(ui->dragCoeffEdit, &QLineEdit::textChanged, this, &MainWindow::onInputFieldChanged);
+
+    // Initially disable the calculate button
+    ui->calculateButton->setEnabled(false);
+    ui->calculateZeroButton->setEnabled(false);
+    ui->generateTableButton->setEnabled(false);
+
     updateUnitLabels();
     setupInputValidators();
 
@@ -203,6 +222,55 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+/**
+ * @brief Validates all required inputs and updates the calculate button state.
+ *
+ * Checks all required input fields and enables/disables the calculate button
+ * based on whether all required fields have valid values.
+ */
+void MainWindow::validateInputsAndUpdateCalculateButton() {
+    bool allValid = true;
+
+    // Check required fields
+    double temp;
+
+    // Mass is required
+    if (!validateInput(ui->massEdit, temp, "mass", false)) {
+        allValid = false;
+    }
+
+    // Diameter is required
+    if (!validateInput(ui->diameterEdit, temp, "diameter", false)) {
+        allValid = false;
+    }
+
+    // Muzzle velocity is required
+    if (!validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity", false)) {
+        allValid = false;
+    }
+
+    // Scope height is required
+    if (!validateInput(ui->scopeHeightEdit, temp, "scopeHeight", false)) {
+        allValid = false;
+    }
+
+    // Enable/disable the calculate button based on validation
+    ui->calculateButton->setEnabled(allValid);
+
+    // Also update the zero angle and table buttons if needed
+    ui->calculateZeroButton->setEnabled(allValid);
+    ui->generateTableButton->setEnabled(allValid);
+}
+
+/**
+ * @brief Handles changes to input fields.
+ *
+ * Called when any input field is changed to trigger validation.
+ */
+void MainWindow::onInputFieldChanged() {
+    validateInputsAndUpdateCalculateButton();
 }
 
 /**
@@ -377,30 +445,20 @@ bool MainWindow::validateInput(QLineEdit* field, double& value, const std::strin
         return true;
     }
 
+    // If the field is empty but not allowed, return false
+    if (text.isEmpty()) {
+        return false;
+    }
+
     bool ok;
     double val = text.toDouble(&ok);
 
     if (!ok) {
-        QString description = QString::fromStdString(InputValidator::getInstance().getFieldDescription(fieldName));
-        QMessageBox::warning(this, "Invalid Input",
-                             QString("Invalid value in %1 field.\n%2\nPlease enter a valid number.")
-                                 .arg(field->objectName())
-                                 .arg(description.isEmpty() ? "" : QString("(%1) ").arg(description)));
-        field->setFocus();
         return false;
     }
 
     // Check if the value is valid using the current unit system
     if (!InputValidator::getInstance().isValid(fieldName, val, useMetricUnits, allowEmpty)) {
-        auto range = InputValidator::getInstance().getValidationRange(fieldName, useMetricUnits);
-        QString description = QString::fromStdString(InputValidator::getInstance().getFieldDescription(fieldName));
-        QMessageBox::warning(this, "Invalid Input",
-                             QString("Value in %1 field is out of range.\n%2\nValid range is %3 to %4.")
-                                 .arg(field->objectName())
-                                 .arg(description.isEmpty() ? "" : QString("(%1) ").arg(description))
-                                 .arg(range.first)
-                                 .arg(range.second));
-        field->setFocus();
         return false;
     }
 
@@ -416,14 +474,33 @@ bool MainWindow::validateInput(QLineEdit* field, double& value, const std::strin
 bool MainWindow::validateAllInputs() {
     double temp;
 
-    // Validate mass (not required)
-    validateInput(ui->massEdit, temp, "mass", true);
+    // Validate mass (required)
+    if (!validateInput(ui->massEdit, temp, "mass", false)) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a valid mass.");
+        ui->massEdit->setFocus();
+        return false;
+    }
 
-    // Validate diameter (not required)
-    validateInput(ui->diameterEdit, temp, "diameter", true);
+    // Validate diameter (required)
+    if (!validateInput(ui->diameterEdit, temp, "diameter", false)) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a valid diameter.");
+        ui->diameterEdit->setFocus();
+        return false;
+    }
 
     // Validate muzzle velocity (required)
-    if (!validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity", false)) return false;
+    if (!validateInput(ui->muzzleVelocityEdit, temp, "muzzleVelocity", false)) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a valid muzzle velocity.");
+        ui->muzzleVelocityEdit->setFocus();
+        return false;
+    }
+
+    // Validate scope height (required)
+    if (!validateInput(ui->scopeHeightEdit, temp, "scopeHeight", false)) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a valid scope height.");
+        ui->scopeHeightEdit->setFocus();
+        return false;
+    }
 
     // Validate launch angle (not required)
     bool ok;
@@ -440,7 +517,9 @@ bool MainWindow::validateAllInputs() {
     }
 
     // Validate wind speed (not required)
-    validateInput(ui->windSpeedEdit, temp, "windSpeed", true);
+    if (!validateInput(ui->windSpeedEdit, temp, "windSpeed", true)) {
+        // Don't return false for optional fields
+    }
 
     // Validate wind direction (not required)
     QString windDirText = ui->windDirectionEdit->text().trimmed();
@@ -468,15 +547,13 @@ bool MainWindow::validateAllInputs() {
         }
     }
 
-    // Validate scope height (not required)
-    validateInput(ui->scopeHeightEdit, temp, "scopeHeight", true);
-
     // Validate drag coefficient (not required)
-    validateInput(ui->dragCoeffEdit, temp, "dragCoefficient", true);
+    if (!validateInput(ui->dragCoeffEdit, temp, "dragCoefficient", true)) {
+        // Don't return false for optional fields
+    }
 
     return true;
 }
-
 
 /**
  * @brief Handles changes to the drop unit selection.
@@ -510,11 +587,31 @@ void MainWindow::onDropUnitChanged(int index) {
     }
 }
 
+void MainWindow::calculateZeroAngle() {
+    double temp;
+
+    // Validate zero range (required)
+    if (!validateInput(ui->zeroRangeEdit, temp, "zeroRange", false)) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a valid zero range.");
+        ui->zeroRangeEdit->setFocus();
+        return;
+    }
+    double range = temp;
+
+    // Convert range to meters if in imperial mode
+    if (!useMetricUnits) {
+        range *= 0.9144; // yards to meters
+    }
+
+    calculateAndDisplayZeroAngle(range);
+}
+
 void MainWindow::generateTrajectoryTable() {
     double temp;
 
     // Validate max range (required)
     if (!validateInput(ui->tableMaxRangeEdit, temp, "tableMaxRange", false)) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a valid maximum range.");
         ui->tableMaxRangeEdit->setFocus();
         return;
     }
@@ -522,6 +619,7 @@ void MainWindow::generateTrajectoryTable() {
 
     // Validate interval (required)
     if (!validateInput(ui->tableIntervalEdit, temp, "tableInterval", false)) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a valid interval.");
         ui->tableIntervalEdit->setFocus();
         return;
     }
@@ -544,25 +642,6 @@ void MainWindow::generateTrajectoryTable() {
 
     // Switch to the Trajectory Table tab
     ui->tabWidget->setCurrentIndex(3);
-}
-
-
-void MainWindow::calculateZeroAngle() {
-    double temp;
-
-    // Validate zero range (required)
-    if (!validateInput(ui->zeroRangeEdit, temp, "zeroRange", false)) {
-        ui->zeroRangeEdit->setFocus();
-        return;
-    }
-    double range = temp;
-
-    // Convert range to meters if in imperial mode
-    if (!useMetricUnits) {
-        range *= 0.9144; // yards to meters
-    }
-
-    calculateAndDisplayZeroAngle(range);
 }
 
 /**
