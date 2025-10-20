@@ -49,6 +49,7 @@ private slots:
     void onActionExitTriggered();
     void validateInputsAndUpdateCalculateButton();
     void onInputFieldChanged();
+    void onDragModelChanged(int index);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -61,6 +62,7 @@ private:
     std::vector<Bullet> bulletDatabase;
     double scopeHeight;  // Height of the scope above the barrel in meters
     bool hasUnsavedChanges;
+    QString currentDragModel;  // Current drag model (G1 or G7);
 
 private:
     enum class DropUnit {

@@ -96,6 +96,9 @@
           <item>
            <widget class="QLineEdit" name="dragCoeffEdit"/>
           </item>
+          <item>
+           <widget class="QComboBox" name="dragModelComboBox"/>
+          </item>
          </layout>
         </item>
         <item>

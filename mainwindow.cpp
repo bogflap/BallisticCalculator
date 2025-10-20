@@ -29,6 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
     , useMetricUnits(true)
     , scopeHeight(0.038)  // Default scope height in meters (38mm)
     , hasUnsavedChanges(false)
+    , currentDragModel("G7")  // Default to G7
     , dropUnit(DropUnit::Inches)
 {
     ui->setupUi(this);
@@ -202,6 +203,15 @@ MainWindow::MainWindow(QWidget *parent)
     ui->calculateZeroButton->setEnabled(false);
     ui->generateTableButton->setEnabled(false);
 
+    // Set up drag model combo box
+    ui->dragModelComboBox->addItem("G1");
+    ui->dragModelComboBox->addItem("G7");
+    ui->dragModelComboBox->setCurrentIndex(1);  // Default to G7
+
+    // Connect drag model combo box
+    connect(ui->dragModelComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainWindow::onDragModelChanged);
+
     updateUnitLabels();
     setupInputValidators();
 
@@ -222,6 +232,24 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+/**
+ * @brief Handles changes to the drag model selection.
+ *
+ * Updates the current drag model when the user selects a different model from the combo box.
+ *
+ * @param index The index of the selected drag model in the combo box.
+ */
+void MainWindow::onDragModelChanged(int index) {
+    if (index == 0) {
+        currentDragModel = "G1";
+    } else {
+        currentDragModel = "G7";
+    }
+
+    // Update the drag coefficient if needed
+    validateInputsAndUpdateCalculateButton();
 }
 
 /**
@@ -258,8 +286,6 @@ void MainWindow::validateInputsAndUpdateCalculateButton() {
 
     // Enable/disable the calculate button based on validation
     ui->calculateButton->setEnabled(allValid);
-
-    // Also update the zero angle and table buttons if needed
     ui->calculateZeroButton->setEnabled(allValid);
     ui->generateTableButton->setEnabled(allValid);
 }
@@ -314,6 +340,11 @@ void MainWindow::setupTooltips() {
             .arg(range.first)
                 .arg(range.second);
         }
+
+        // Set tooltip for drag model combo box
+        ui->dragModelComboBox->setToolTip("Select the drag model to use for calculations.\n"
+                                          "G1: Standard drag model for flat-based bullets.\n"
+                                          "G7: Modern drag model for boat-tail bullets.");
 
         return tooltip;
     };
@@ -1053,11 +1084,37 @@ void MainWindow::onBulletSelected(int index) {
  *
  * @param bullet The bullet for which to get the drag coefficient.
  * @param velocity The velocity at which to get the drag coefficient.
- * @param model The drag model to use (e.g., "G1", "G7").
+ * @param model The drag model to use ("G1" or "G7").
  * @return The drag coefficient at the specified velocity.
  */
 double MainWindow::getDragCoefficient(const Bullet &bullet, double velocity, const QString &model) {
-    return getDragCoefficientAtVelocity(bullet, velocity, model);
+    // If the bullet has a specific drag coefficient, use that
+    if (bullet.drag_coefficient > 0) {
+        return bullet.drag_coefficient;
+    }
+
+    // Otherwise, use standard drag curves based on the selected model
+    double mach = velocity / 343.0;  // Speed of sound in m/s
+
+    if (model == "G1") {
+        // G1 standard drag curve
+        if (mach < 0.95) {
+            return 0.295;  // Subsonic G1
+        } else if (mach < 1.2) {
+            return 0.295 + (0.220 - 0.295) * (mach - 0.95) / 0.25;  // Transonic
+        } else {
+            return 0.220;  // Supersonic G1
+        }
+    } else {  // G7
+        // G7 standard drag curve (more appropriate for modern bullets)
+        if (mach < 0.95) {
+            return 0.150;  // Subsonic G7
+        } else if (mach < 1.2) {
+            return 0.150 + (0.120 - 0.150) * (mach - 0.95) / 0.25;  // Transonic
+        } else {
+            return 0.120;  // Supersonic G7
+        }
+    }
 }
 
 /**
@@ -1267,12 +1324,7 @@ void MainWindow::calculateTrajectory() {
         diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
     }
 
-    // Get muzzle velocity - required field
-    if (ui->muzzleVelocityEdit->text().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Error", "Muzzle velocity is required.");
-        ui->muzzleVelocityEdit->setFocus();
-        return;
-    }
+    // Get muzzle velocity (required)
     double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
 
     // Get launch angle (default to 0 if empty)
@@ -1308,9 +1360,8 @@ void MainWindow::calculateTrajectory() {
         dragCoeff = ui->dragCoeffEdit->text().toDouble();
     }
 
-    // If drag coefficient is from bullet profile, use that
-    // This would require checking if the bullet has a drag coefficient defined
-    // For now, we'll use the value from the UI or the default
+    // Get drag coefficient based on selected model
+    dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, currentDragModel);
 
     delete ballisticsModel;
     switch (currentAlgorithm) {
@@ -1336,9 +1387,6 @@ void MainWindow::calculateTrajectory() {
         ballisticsModel = new Pejsa();
         break;
     }
-
-    // Get drag coefficient based on selected model
-    dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
 
     // Pass scopeHeight to setParameters
     ballisticsModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle,

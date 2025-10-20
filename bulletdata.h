@@ -16,6 +16,7 @@ struct Bullet {
     double diameter_in;
     double diameter_mm;
     QVariantMap drag_coefficients;
+    double drag_coefficient;  // Drag coefficient for this bullet
 };
 
 class BulletData {
