@@ -348,23 +348,8 @@
           <item>
            <widget class="QComboBox" name="dropUnitComboBox">
             <property name="currentIndex">
-             <number>0</number>
+             <number>-1</number>
             </property>
-            <item>
-             <property name="text">
-              <string>Inches</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>MOA</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>MIL</string>
-             </property>
-            </item>
            </widget>
           </item>
          </layout>

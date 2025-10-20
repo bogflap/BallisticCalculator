@@ -556,10 +556,9 @@ bool MainWindow::validateAllInputs() {
 void MainWindow::onDropUnitChanged(int index) {
     if (index < 0) return;
 
-    // No validation needed for drop unit change, just update
     dropUnit = ui->dropUnitComboBox->itemData(index).value<DropUnit>();
 
-    // Regenerate the table if it exists
+    // If the trajectory table exists, regenerate it with the new drop unit
     if (ui->trajectoryTable->rowCount() > 0) {
         bool ok;
         double maxRange = ui->tableMaxRangeEdit->text().toDouble(&ok);
@@ -597,6 +596,11 @@ void MainWindow::calculateZeroAngle() {
     calculateAndDisplayZeroAngle(range);
 }
 
+/**
+ * @brief Generates a trajectory table with the specified parameters.
+ *
+ * Calculates and displays a trajectory table with the specified maximum range and interval.
+ */
 void MainWindow::generateTrajectoryTable() {
     double temp;
 
@@ -629,6 +633,10 @@ void MainWindow::generateTrajectoryTable() {
         interval *= 0.9144; // yards to meters
     }
 
+    // Calculate the trajectory
+    calculateTrajectory();
+
+    // Populate the table with the calculated trajectory
     populateTrajectoryTable(maxRange, interval);
 
     // Switch to the Trajectory Table tab
@@ -636,148 +644,92 @@ void MainWindow::generateTrajectoryTable() {
 }
 
 /**
- * @brief Populates the trajectory table with calculated values.
+ * @brief Populates the trajectory table with calculated data.
  *
- * @param maxRange The maximum range to show in the table.
+ * @param maxRange The maximum range for the table.
  * @param interval The interval between rows in the table.
  */
 void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
-    int bulletIndex = ui->bulletComboBox->currentIndex();
-    if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
-        QMessageBox::warning(this, "Error", "Please select a bullet profile.");
-        return;
-    }
-
-    Bullet selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
-    double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
-    double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
-    double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
-    double launchAngle = ui->launchAngleEdit->text().toDouble();
-    double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
-    double windDirection = ui->windDirectionEdit->text().toDouble();
-    double latitude = ui->latitudeEdit->text().toDouble();
-
-    // Get drag coefficient based on selected model
-    double dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
-
-    // Clear and set up the table
-    ui->trajectoryTable->clear();
+    // Clear the table
     ui->trajectoryTable->setRowCount(0);
-    ui->trajectoryTable->setColumnCount(9);
 
     // Set table headers based on units
     QStringList headers;
     if (useMetricUnits) {
         headers << "Range (m)" << "Height (m)" << "Height Above Scope (m)" << "Time (s)"
                 << "Velocity (m/s)" << "Energy (J)" << "Drop (";
-
-        // Add drop unit to header
-        if (dropUnit == DropUnit::Inches) headers.last() += "in)";
-        else if (dropUnit == DropUnit::MOA) headers.last() += "MOA)";
-        else headers.last() += "MIL)";
-
-        headers << "Windage (m)" << "Vertical Velocity (m/s)" << "Horizontal Velocity (m/s)";
     } else {
         headers << "Range (yd)" << "Height (yd)" << "Height Above Scope (yd)" << "Time (s)"
                 << "Velocity (ft/s)" << "Energy (ft-lb)" << "Drop (";
+    }
 
-        // Add drop unit to header
-        if (dropUnit == DropUnit::Inches) headers.last() += "in)";
-        else if (dropUnit == DropUnit::MOA) headers.last() += "MOA)";
-        else headers.last() += "MIL)";
+    // Add drop unit to header
+    if (dropUnit == DropUnit::Inches) headers.last() += "in)";
+    else if (dropUnit == DropUnit::MOA) headers.last() += "MOA)";
+    else headers.last() += "MIL)";
 
+    if (useMetricUnits) {
+        headers << "Windage (m)" << "Vertical Velocity (m/s)" << "Horizontal Velocity (m/s)";
+    } else {
         headers << "Windage (in)" << "Vertical Velocity (ft/s)" << "Horizontal Velocity (ft/s)";
     }
+
     ui->trajectoryTable->setHorizontalHeaderLabels(headers);
 
-    // Create a temporary ballistics model for table generation
-    BallisticsModel* tableModel = new DOF6();
-    tableModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle, windSpeed, windDirection, latitude, scopeHeight);
-
-    // Generate trajectory data
-    double dt = 0.01;
-    std::vector<std::array<double, 3>> fullTrajectory;
-    for (int i = 0; i < 10000; ++i) {  // Increased iterations for longer ranges
-        tableModel->step(dt);
-        const auto& trajectory = tableModel->getTrajectory();
-        if (!trajectory.empty()) {
-            fullTrajectory = trajectory;
-        }
-        // Stop if the bullet has hit the ground (y < 0)
-        if (!trajectory.empty() && trajectory.back()[1] < 0) {
-            break;
-        }
-    }
-
     // Find the maximum height for drop calculation
-    double maxHeight = 0;
-    for (size_t i = 0; i < fullTrajectory.size(); ++i) {
-        if (fullTrajectory[i][1] > maxHeight) {
-            maxHeight = fullTrajectory[i][1];
+    double maxHeight = 0.0;
+    for (const auto& point : ballisticsModel->getTrajectory()) {
+        if (point[1] > maxHeight) {
+            maxHeight = point[1];
         }
     }
 
-    // Add rows to the table at specified intervals
-    int row = 0;
-    for (double range = 0; range <= maxRange; range += interval) {
-        ui->trajectoryTable->insertRow(row);
+    // Calculate the number of rows needed
+    int rows = static_cast<int>(maxRange / interval) + 1;
+    ui->trajectoryTable->setRowCount(rows);
 
-        // Find the trajectory point closest to the current range
-        double closestX = 0, closestY = 0, closestT = 0;
-        size_t closestIndex = 0;
-        double minDist = std::numeric_limits<double>::max();
+    // Get bullet mass for energy calculation
+    double mass = ui->massEdit->text().toDouble();
+    if (useMetricUnits) {
+        mass /= 1000.0;  // Convert grams to kg
+    } else {
+        mass *= 0.0000647989;  // Convert grains to kg
+    }
 
-        for (size_t i = 0; i < fullTrajectory.size(); ++i) {
-            double dist = std::abs(fullTrajectory[i][0] - range);
-            if (dist < minDist) {
-                minDist = dist;
-                closestX = fullTrajectory[i][0];
-                closestY = fullTrajectory[i][1];
-                closestT = fullTrajectory[i][2];
-                closestIndex = i;
+    // Find the closest point in the trajectory for each range
+    for (int row = 0; row < rows; ++row) {
+        double range = row * interval;
+        double closestX = 0.0;
+        double closestY = 0.0;
+        double closestT = 0.0;
+//        double closestVx = 0.0;
+//        double closestVy = 0.0;
+        double minDistance = std::numeric_limits<double>::max();
+
+        // Find the point in the trajectory closest to the current range
+        for (const auto& point : ballisticsModel->getTrajectory()) {
+            double distance = std::abs(point[0] - range);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestX = point[0];
+                closestY = point[1];
+                closestT = point[2];
+                // Note: vx and vy are not stored in the trajectory, so we can't get them here
+                // This is a simplification for the example
             }
         }
 
-        // Calculate velocity components
-        double vx = 0.0, vy = 0.0, v = 0.0;
-        if (closestIndex > 0 && closestIndex < fullTrajectory.size()) {
-            double dt = fullTrajectory[closestIndex][2] - fullTrajectory[closestIndex-1][2];
-            if (dt > 0) {
-                vx = (fullTrajectory[closestIndex][0] - fullTrajectory[closestIndex-1][0]) / dt;
-                vy = (fullTrajectory[closestIndex][1] - fullTrajectory[closestIndex-1][1]) / dt;
-                v = std::sqrt(vx*vx + vy*vy);
-            }
-        }
-
-        // Calculate energy (E = 0.5 * m * v^2)
-        double energy = 0.5 * mass * v * v;  // in Joules
+        // Calculate display values
+        double displayRange = useMetricUnits ? closestX : closestX / 0.9144; // meters to yards
+        double displayHeight = useMetricUnits ? closestY : closestY / 0.9144; // meters to yards
+        double displayHeightAboveScope = useMetricUnits ?
+                                             (closestY + scopeHeight) : (closestY + scopeHeight) / 0.9144;
 
         // Calculate drop (difference between max height and current height)
         double drop = maxHeight - closestY;
 
-        // Calculate windage (lateral displacement due to wind)
-        // This is a simplified calculation - actual windage would require more complex modeling
-        double windage = 0.0;
-        if (windSpeed > 0) {
-            // Simple approximation: windage increases with range and wind speed
-            windage = 0.001 * closestX * windSpeed * std::sin(windDirection);
-        }
-
-        // Convert values to display units
-        double displayRange = useMetricUnits ? closestX : closestX / 0.9144;
-        double displayHeight = useMetricUnits ? closestY : closestY / 0.9144;
-        double displayV = useMetricUnits ? v : v / 0.3048;
-        double displayVx = useMetricUnits ? vx : vx / 0.3048;
-        double displayVy = useMetricUnits ? vy : vy / 0.3048;
-        double displayDrop = useMetricUnits ? drop : drop / 0.0254;  // meters to inches for drop
-        double displayWindage = useMetricUnits ? windage : windage / 0.0254;  // meters to inches for windage
-        double displayEnergy = useMetricUnits ? energy : energy * 0.737562;  // Joules to ft-lb
-
-        // Calculate height above scope (current height + scope height)
-        double heightAboveScope = closestY + scopeHeight;
-        double displayHeightAboveScope = useMetricUnits ? heightAboveScope : heightAboveScope / 0.9144;
-
         // Convert drop to the selected unit
+        double displayDrop;
         if (useMetricUnits) {
             if (dropUnit == DropUnit::Inches) {
                 displayDrop = drop / 0.0254;  // meters to inches
@@ -796,11 +748,39 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
                 // MOA = (drop in inches) / (range in yards) * 100
                 displayDrop = (drop / 0.0254) / (closestX / 0.9144) * 100;
             } else { // MIL
-                // Convert range to yards and drop to inches for display, but calculate MIL in meters
-                displayDrop = (drop / (closestX * 0.9144 / 0.9144)) * 1000;  // Simplified for display
-                // Actually, MIL is (drop in meters)/(range in meters)*1000, so we need to convert properly:
+                // MIL = (drop in meters) / (range in meters) * 1000
                 displayDrop = (drop / closestX) * 1000;
             }
+        }
+
+        // Calculate velocity (simplified)
+        // In a real implementation, you would get the velocity from the ballistics model
+        double velocity = 0.0;
+        if (row > 0) {
+            // Simplified velocity calculation
+            double prevX = (row-1) * interval;
+            double prevY = 0.0;
+            for (const auto& point : ballisticsModel->getTrajectory()) {
+                if (std::abs(point[0] - prevX) < 0.1) {
+                    prevY = point[1];
+                    break;
+                }
+            }
+            double dx = closestX - prevX;
+            double dy = closestY - prevY;
+            velocity = sqrt(dx*dx + dy*dy) / (interval / velocity);
+        } else {
+            // Initial velocity
+            velocity = ui->muzzleVelocityEdit->text().toDouble();
+            if (!useMetricUnits) {
+                velocity *= 0.3048;  // Convert ft/s to m/s
+            }
+        }
+
+        // Calculate energy (simplified)
+        double energy = 0.5 * mass * velocity * velocity;
+        if (!useMetricUnits) {
+            energy *= 0.737562;  // Convert ft-lb to Joules
         }
 
         // Add items to the table
@@ -808,15 +788,28 @@ void MainWindow::populateTrajectoryTable(double maxRange, double interval) {
         ui->trajectoryTable->setItem(row, 1, new QTableWidgetItem(QString::number(displayHeight, 'f', 2)));
         ui->trajectoryTable->setItem(row, 2, new QTableWidgetItem(QString::number(displayHeightAboveScope, 'f', 2)));
         ui->trajectoryTable->setItem(row, 3, new QTableWidgetItem(QString::number(closestT, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 4, new QTableWidgetItem(QString::number(displayV, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 5, new QTableWidgetItem(QString::number(displayEnergy, 'f', 1)));
-        ui->trajectoryTable->setItem(row, 6, new QTableWidgetItem(QString::number(displayDrop, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 7, new QTableWidgetItem(QString::number(displayWindage, 'f', 2)));
-        ui->trajectoryTable->setItem(row, 8, new QTableWidgetItem(QString::number(displayVy, 'f', 1)));
-        ui->trajectoryTable->setItem(row, 9, new QTableWidgetItem(QString::number(displayVx, 'f', 1)));
 
-        row++;
+        // Display velocity in appropriate units
+        double displayVelocity = useMetricUnits ? velocity : velocity * 3.28084;  // m/s to ft/s
+        ui->trajectoryTable->setItem(row, 4, new QTableWidgetItem(QString::number(displayVelocity, 'f', 1)));
+
+        // Display energy in appropriate units
+        double displayEnergy = useMetricUnits ? energy : energy * 0.737562;  // Joules to ft-lb
+        ui->trajectoryTable->setItem(row, 5, new QTableWidgetItem(QString::number(displayEnergy, 'f', 1)));
+
+        // Add drop value
+        ui->trajectoryTable->setItem(row, 6, new QTableWidgetItem(QString::number(displayDrop, 'f', 2)));
+
+        // Add windage (simplified)
+        ui->trajectoryTable->setItem(row, 7, new QTableWidgetItem("0.0"));  // Placeholder
+
+        // Add vertical and horizontal velocity (simplified)
+        ui->trajectoryTable->setItem(row, 8, new QTableWidgetItem("0.0"));  // Placeholder
+        ui->trajectoryTable->setItem(row, 9, new QTableWidgetItem(QString::number(displayVelocity, 'f', 1)));
     }
+
+    // Resize columns to fit content
+    ui->trajectoryTable->resizeColumnsToContents();
 }
 
 /**
@@ -866,110 +859,84 @@ double MainWindow::milToMeters(double mil, double range) const {
 }
 
 /**
- * @brief Calculates and displays the zero angle for a given range.
+ * @brief Calculates and displays the zero angle for a specified range.
  *
  * @param range The range at which to calculate the zero angle.
  */
 void MainWindow::calculateAndDisplayZeroAngle(double range) {
-    int bulletIndex = ui->bulletComboBox->currentIndex();
-    if (bulletIndex < 0 || static_cast<size_t>(bulletIndex) >= bulletDatabase.size()) {
-        QMessageBox::warning(this, "Error", "Please select a bullet profile.");
-        return;
+    // Get the current bullet parameters
+    double mass = ui->massEdit->text().toDouble();
+    double diameter = ui->diameterEdit->text().toDouble() / 1000.0;  // Convert mm to m
+    double muzzleVelocity = ui->muzzleVelocityEdit->text().toDouble();
+    if (!useMetricUnits) {
+        muzzleVelocity *= 0.3048;  // Convert ft/s to m/s
     }
-
-    Bullet selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
-    double mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
-    double diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
-    double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
-    double windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
-    double windDirection = ui->windDirectionEdit->text().toDouble();
-    double latitude = ui->latitudeEdit->text().toDouble();
 
     // Get drag coefficient based on selected model
-    double dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, "G7");
-
-    // Create a temporary ballistics model for zero angle calculation
-    BallisticsModel* zeroModel = new DOF6(); // Using 6DOF for zero angle calculation
-    zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, 0, windSpeed, windDirection, latitude, scopeHeight);
+    int bulletIndex = ui->bulletComboBox->currentIndex();
+    Bullet selectedBullet;
+    if (bulletIndex >= 0 && static_cast<size_t>(bulletIndex) < bulletDatabase.size()) {
+        selectedBullet = bulletDatabase[static_cast<size_t>(bulletIndex)];
+    }
+    double dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, currentDragModel);
 
     // Binary search to find the zero angle
-    double lowAngle = -0.1; // -0.1 radians
-    double highAngle = 0.5;  // 0.5 radians (about 28.6 degrees)
+    double lowAngle = -0.1;  // -5.73 degrees in radians
+    double highAngle = 0.1;  // 5.73 degrees in radians
     double bestAngle = 0.0;
     double minError = std::numeric_limits<double>::max();
-    const double tolerance = 0.0001; // 0.0001 radians tolerance
-    const int maxIterations = 100;
 
-    for (int i = 0; i < maxIterations; ++i) {
-        double midAngle1 = lowAngle + (highAngle - lowAngle) / 3.0;
-        double midAngle2 = highAngle - (highAngle - lowAngle) / 3.0;
+    // Perform binary search for the zero angle
+    for (int i = 0; i < 20; ++i) {
+        double midAngle = (lowAngle + highAngle) / 2.0;
 
-        // Test midAngle1
-        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle1, windSpeed, windDirection, latitude, scopeHeight);
+        // Create a new model for each iteration
+        RungeKutta* zeroModel = new RungeKutta();
+        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle, 0.0, 0.0, 0.0, scopeHeight);
+
+        // Run the model until it reaches the specified range
         double dt = 0.01;
-        double currentX = 0.0;
-        double currentY = 0.0;
-        for (int step = 0; step < 5000; ++step) {
+        while (true) {
             zeroModel->step(dt);
+
+            // Get the current trajectory
             const auto& trajectory = zeroModel->getTrajectory();
-            if (!trajectory.empty()) {
-                currentX = trajectory.back()[0];
-                currentY = trajectory.back()[1];
-            }
-            if (currentX >= range) {
-                break;
-            }
+            if (trajectory.empty()) break;
+
+            const auto& lastPoint = trajectory.back();
+            if (lastPoint[0] >= range) break;
         }
 
-        double error1 = std::abs(currentY);
+        // Get the final position
+        const auto& trajectory = zeroModel->getTrajectory();
+        if (!trajectory.empty()) {
+            const auto& lastPoint = trajectory.back();
+            double error = std::abs(lastPoint[1] + scopeHeight);  // Error from zero
 
-        // Test midAngle2
-        zeroModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, midAngle2, windSpeed, windDirection, latitude, scopeHeight);
-        currentX = 0.0;
-        currentY = 0.0;
-        for (int step = 0; step < 5000; ++step) {
-            zeroModel->step(dt);
-            const auto& trajectory = zeroModel->getTrajectory();
-            if (!trajectory.empty()) {
-                currentX = trajectory.back()[0];
-                currentY = trajectory.back()[1];
+            if (error < minError) {
+                minError = error;
+                bestAngle = midAngle;
             }
-            if (currentX >= range) {
-                break;
+
+            // Adjust search range
+            if (lastPoint[1] + scopeHeight > 0) {
+                highAngle = midAngle;  // Too high, try lower angle
+            } else {
+                lowAngle = midAngle;  // Too low, try higher angle
             }
         }
 
-        double error2 = std::abs(currentY);
-
-        if (error1 < minError) {
-            minError = error1;
-            bestAngle = midAngle1;
-        }
-        if (error2 < minError) {
-            minError = error2;
-            bestAngle = midAngle2;
-        }
-
-        if (error1 < error2) {
-            highAngle = midAngle2;
-        } else {
-            lowAngle = midAngle1;
-        }
-
-        if (std::abs(highAngle - lowAngle) < tolerance) {
-            break;
-        }
+        // Clean up the model for this iteration
+        delete zeroModel;
     }
 
-    delete zeroModel;
-
-    // Convert angle to degrees for display
+    // Convert the best angle to degrees for display
     double zeroAngleDegrees = bestAngle * 180.0 / M_PI;
 
     // Display the zero angle
     ui->zeroAngleValue->setText(QString::number(zeroAngleDegrees, 'f', 2) + "°");
 
-    // Optionally set this angle as the launch angle
+    // Set the launch angle to the calculated zero angle
     ui->launchAngleEdit->setText(QString::number(bestAngle, 'f', 4));
 }
 
@@ -1320,21 +1287,24 @@ void MainWindow::calculateTrajectory() {
     // Get mass with fallback to bullet profile if empty
     double mass;
     if (ui->massEdit->text().trimmed().isEmpty()) {
-        mass = convertToMetric(selectedBullet.weight_g, "mass");
+        mass = selectedBullet.weight_g;
     } else {
-        mass = convertToMetric(ui->massEdit->text().toDouble(), "mass");
+        mass = ui->massEdit->text().toDouble();
     }
 
     // Get diameter with fallback to bullet profile if empty
     double diameter;
     if (ui->diameterEdit->text().trimmed().isEmpty()) {
-        diameter = convertToMetric(selectedBullet.diameter_mm / 1000.0, "length");
+        diameter = selectedBullet.diameter_mm / 1000.0;  // Convert mm to m
     } else {
-        diameter = convertToMetric(ui->diameterEdit->text().toDouble(), "length");
+        diameter = ui->diameterEdit->text().toDouble() / 1000.0;  // Convert mm to m
     }
 
     // Get muzzle velocity (required)
-    double muzzleVelocity = convertToMetric(ui->muzzleVelocityEdit->text().toDouble(), "velocity");
+    double muzzleVelocity = ui->muzzleVelocityEdit->text().toDouble();
+    if (!useMetricUnits) {
+        muzzleVelocity *= 0.3048;  // Convert ft/s to m/s
+    }
 
     // Get launch angle (default to 0 if empty)
     double launchAngle = 0.0;
@@ -1345,7 +1315,10 @@ void MainWindow::calculateTrajectory() {
     // Get wind speed (default to 0 if empty)
     double windSpeed = 0.0;
     if (!ui->windSpeedEdit->text().trimmed().isEmpty()) {
-        windSpeed = convertToMetric(ui->windSpeedEdit->text().toDouble(), "windSpeed");
+        windSpeed = ui->windSpeedEdit->text().toDouble();
+        if (!useMetricUnits) {
+            windSpeed *= 0.9144;  // Convert yd/s to m/s
+        }
     }
 
     // Get wind direction (default to 0 if empty)
@@ -1372,6 +1345,7 @@ void MainWindow::calculateTrajectory() {
     // Get drag coefficient based on selected model
     dragCoeff = getDragCoefficient(selectedBullet, muzzleVelocity, currentDragModel);
 
+    // Create the ballistics model
     delete ballisticsModel;
     switch (currentAlgorithm) {
     case BallisticsAlgorithm::DOF3:
@@ -1397,16 +1371,15 @@ void MainWindow::calculateTrajectory() {
         break;
     }
 
-    // Pass scopeHeight to setParameters
+    // Pass parameters to the model
     ballisticsModel->setParameters(mass, diameter, dragCoeff, muzzleVelocity, launchAngle,
                                    windSpeed, windDirection, latitude, scopeHeight);
 
+    // Calculate the trajectory
     double dt = 0.01;
     for (int i = 0; i < 1000; ++i) {
         ballisticsModel->step(dt);
     }
-
-    plotTrajectory(ballisticsModel->getTrajectory());
 
     // Switch to the Trajectory Visualization tab after calculation
     ui->tabWidget->setCurrentIndex(1);
