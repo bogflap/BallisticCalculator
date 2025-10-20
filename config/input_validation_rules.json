@@ -3,62 +3,62 @@
     "mass": {
       "min": 0.1,
       "max": 200.0,
-      "description": "Mass values (grams or grains)"
+      "description": "The mass of the bullet. This affects the bullet's momentum and how it's affected by gravity and drag."
     },
     "diameter": {
       "min": 0.1,
       "max": 200.0,
-      "description": "Diameter values (mm or inches)"
+      "description": "The diameter of the bullet. This affects the bullet's cross-sectional area and thus its drag."
     },
     "muzzleVelocity": {
       "min": 10.0,
       "max": 2000.0,
-      "description": "Muzzle velocity values (m/s or ft/s)"
+      "description": "The initial velocity of the bullet as it leaves the muzzle. This is one of the most important factors in determining the bullet's trajectory."
     },
     "launchAngle": {
       "min": -90.0,
       "max": 90.0,
-      "description": "Launch angle values (degrees)"
+      "description": "The angle at which the bullet is launched relative to the horizontal. Positive values are above the horizontal, negative values are below."
     },
     "windSpeed": {
       "min": 0.0,
       "max": 100.0,
-      "description": "Wind speed values (m/s or yd/s)"
+      "description": "The speed of the wind. This affects the bullet's trajectory by pushing it sideways."
     },
     "windDirection": {
       "min": 0.0,
       "max": 360.0,
-      "description": "Wind direction values (degrees)"
+      "description": "The direction of the wind in degrees. 0° is directly from the front, 90° is from the right, 180° is from behind, and 270° is from the left."
     },
     "latitude": {
       "min": -90.0,
       "max": 90.0,
-      "description": "Latitude values (degrees)"
+      "description": "The latitude of the shooting location. This affects the Coriolis effect on the bullet's trajectory."
     },
     "scopeHeight": {
       "min": 1.0,
       "max": 500.0,
-      "description": "Scope height values (mm or inches)"
+      "description": "The height of the scope above the barrel. This affects the point of impact as the bullet's trajectory is below the scope's line of sight."
     },
     "dragCoefficient": {
       "min": 0.01,
       "max": 5.0,
-      "description": "Drag coefficient values"
+      "description": "The drag coefficient of the bullet. This affects how much the bullet is slowed down by air resistance."
     },
     "tableMaxRange": {
       "min": 1000.0,
       "max": 5000000.0,
-      "description": "Table max range values (mm or yards)"
+      "description": "The maximum range to show in the trajectory table. This determines how far the table extends."
     },
     "tableInterval": {
       "min": 100.0,
       "max": 1000000.0,
-      "description": "Table interval values (mm or yards)"
+      "description": "The interval between rows in the trajectory table. This determines the spacing of data points in the table."
     },
     "zeroRange": {
       "min": 1000.0,
       "max": 5000000.0,
-      "description": "Zero range values (mm or yards)"
+      "description": "The range at which to calculate the zero angle. This is the distance at which you want the bullet to hit the target."
     }
   }
 }

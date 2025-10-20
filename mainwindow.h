@@ -87,5 +87,6 @@ private:
     bool validateInput(QLineEdit* field, double& value, const std::string& fieldName, bool allowEmpty = true);
     bool validateAllInputs();
     void setupInputValidators();
+    void setupTooltips();
 };
 #endif // MAINWINDOW_H

@@ -185,6 +185,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     updateUnitLabels();
     setupInputValidators();
+
+    // Set up tooltips
+    setupTooltips();
+
+    // Connect unit change to update tooltips
+    connect(ui->unitComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainWindow::setupTooltips);
 }
 
 // Destructor
@@ -196,6 +203,82 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+/**
+ * @brief Sets up tooltips for all input fields.
+ *
+ * Creates tooltips with descriptions and valid ranges for all input fields,
+ * taking into account the current unit system.
+ */
+void MainWindow::setupTooltips() {
+    // Helper function to create tooltip text
+    auto createTooltip = [this](const std::string& fieldName) -> QString {
+        QString description = QString::fromStdString(InputValidator::getInstance().getFieldDescription(fieldName));
+        auto range = InputValidator::getInstance().getValidationRange(fieldName, useMetricUnits);
+
+        QString unit;
+        if (fieldName == "mass") {
+            unit = useMetricUnits ? "grams" : "grains";
+        } else if (fieldName == "diameter") {
+            unit = useMetricUnits ? "millimeters" : "inches";
+        } else if (fieldName == "muzzleVelocity") {
+            unit = useMetricUnits ? "meters/second" : "feet/second";
+        } else if (fieldName == "windSpeed") {
+            unit = useMetricUnits ? "meters/second" : "yards/second";
+        } else if (fieldName == "scopeHeight") {
+            unit = useMetricUnits ? "millimeters" : "inches";
+        } else if (fieldName == "tableMaxRange" || fieldName == "tableInterval" || fieldName == "zeroRange") {
+            unit = useMetricUnits ? "meters" : "yards";
+        } else if (fieldName == "launchAngle" || fieldName == "windDirection" || fieldName == "latitude") {
+            unit = "degrees";
+        }
+
+        QString tooltip = QString("%1\n\n").arg(description);
+
+        if (fieldName != "launchAngle" && fieldName != "windDirection" && fieldName != "latitude") {
+            tooltip += QString("Valid range: %1 to %2 %3")
+            .arg(range.first)
+                .arg(range.second)
+                .arg(unit);
+        } else {
+            tooltip += QString("Valid range: %1 to %2 degrees")
+            .arg(range.first)
+                .arg(range.second);
+        }
+
+        return tooltip;
+    };
+
+    // Set tooltips for all input fields
+    ui->massEdit->setToolTip(createTooltip("mass"));
+    ui->diameterEdit->setToolTip(createTooltip("diameter"));
+    ui->muzzleVelocityEdit->setToolTip(createTooltip("muzzleVelocity"));
+    ui->launchAngleEdit->setToolTip(createTooltip("launchAngle"));
+    ui->windSpeedEdit->setToolTip(createTooltip("windSpeed"));
+    ui->windDirectionEdit->setToolTip(createTooltip("windDirection"));
+    ui->latitudeEdit->setToolTip(createTooltip("latitude"));
+    ui->scopeHeightEdit->setToolTip(createTooltip("scopeHeight"));
+    ui->dragCoeffEdit->setToolTip(createTooltip("dragCoefficient"));
+    ui->tableMaxRangeEdit->setToolTip(createTooltip("tableMaxRange"));
+    ui->tableIntervalEdit->setToolTip(createTooltip("tableInterval"));
+    ui->zeroRangeEdit->setToolTip(createTooltip("zeroRange"));
+
+    // Set tooltips for combo boxes
+    ui->unitComboBox->setToolTip("Select the unit system: Metric or Imperial");
+    ui->algorithmComboBox->setToolTip("Select the ballistics algorithm to use for calculations");
+    ui->bulletComboBox->setToolTip("Select a bullet profile from the database");
+    ui->dropUnitComboBox->setToolTip("Select the unit for displaying drop values: Inches, MOA, or MIL");
+
+    // Set tooltips for buttons
+    ui->calculateButton->setToolTip("Calculate the bullet trajectory with current parameters");
+    ui->exportButton->setToolTip("Export the trajectory data to a CSV file");
+    ui->saveProfileButton->setToolTip("Save the current parameters to a profile file");
+    ui->loadProfileButton->setToolTip("Load parameters from a profile file");
+    ui->loadBulletDataButton->setToolTip("Load bullet data from a JSON file");
+    ui->calculateZeroButton->setToolTip("Calculate the zero angle for the specified range");
+    ui->generateTableButton->setToolTip("Generate a trajectory table with the specified parameters");
+    ui->exitButton->setToolTip("Exit the application");
 }
 
 /**
