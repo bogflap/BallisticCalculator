@@ -5,7 +5,6 @@
 
 #include "ui_mainwindow.h"
 #include "bulletdata.h"
-#include "inputvalidator.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

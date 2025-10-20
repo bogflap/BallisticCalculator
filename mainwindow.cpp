@@ -3,9 +3,14 @@
  * @brief Implementation of the MainWindow class for the Ballistics Calculator application.
  */
 
+#include <QCoreApplication>
+#include <QFileDialog>
+#include <QStandardPaths>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "inputvalidator.h"
 #include "dof3.h"
 #include "dof6.h"
 #include "modifiedpointmass.h"
@@ -1020,28 +1025,74 @@ void MainWindow::calculateAndDisplayZeroAngle(double range) {
  * then loads the bullet profiles from the JSON file.
  */
 void MainWindow::loadBulletDataFile() {
-    QString filePath = QFileDialog::getOpenFileName(
+    // Get the directory of the executable
+    QString executablePath = QCoreApplication::applicationDirPath();
+
+    // Set up the file dialog
+    QString fileName = QFileDialog::getOpenFileName(
         this,
-        "Open Bullet Data File",
-        QDir::homePath(),
-        "JSON Files (*.json)"
-        );
+        tr("Open Bullet Data File"),
+        executablePath,  // Start in the executable directory
+        tr("JSON Files (*.json);;All Files (*)"));
 
-    if (filePath.isEmpty()) {
-        return;
+    if (!fileName.isEmpty()) {
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            QMessageBox::warning(this, "Error", "Could not open file for reading.");
+            return;
+        }
+
+        QByteArray data = file.readAll();
+        file.close();
+
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (doc.isNull() || !doc.isObject()) {
+            QMessageBox::warning(this, "Error", "Invalid JSON format.");
+            return;
+        }
+
+        QJsonObject root = doc.object();
+        if (!root.contains("bullets") || !root["bullets"].isArray()) {
+            QMessageBox::warning(this, "Error", "Invalid bullet data format. Expected 'bullets' array.");
+            return;
+        }
+
+        QJsonArray bullets = root["bullets"].toArray();
+        bulletDatabase.clear();
+
+        for (const QJsonValue& bulletValue : bullets) {
+            if (!bulletValue.isObject()) continue;
+
+            QJsonObject bulletObj = bulletValue.toObject();
+            Bullet bullet;
+
+            // Parse bullet data
+            if (bulletObj.contains("model") && bulletObj["model"].isString()) {
+                bullet.model = bulletObj["model"].toString();
+            }
+
+            if (bulletObj.contains("weight_g") && bulletObj["weight_g"].isDouble()) {
+                bullet.weight_g = bulletObj["weight_g"].toDouble();
+            }
+
+            if (bulletObj.contains("diameter_mm") && bulletObj["diameter_mm"].isDouble()) {
+                bullet.diameter_mm = bulletObj["diameter_mm"].toDouble();
+            }
+
+            if (bulletObj.contains("drag_coefficient") && bulletObj["drag_coefficient"].isDouble()) {
+                bullet.drag_coefficient = bulletObj["drag_coefficient"].toDouble();
+            }
+
+            // Add more fields as needed
+
+            bulletDatabase.push_back(bullet);
+        }
+
+        // Update the bullet combo box
+        populateBulletComboBox();
+
+        QMessageBox::information(this, "Success", "Bullet data loaded successfully.");
     }
-
-    bulletDatabase = BulletData::loadBulletData(filePath);
-    if (bulletDatabase.empty()) {
-        QMessageBox::warning(this, "Error", "Failed to load bullet data.");
-        return;
-    }
-
-    populateBulletComboBox();
-    QMessageBox::information(this, "Success", "Bullet data loaded successfully.");
-
-    // Switch to the Input Parameters tab after loading
-    ui->tabWidget->setCurrentIndex(0);
 }
 
 /**
@@ -1051,11 +1102,14 @@ void MainWindow::loadBulletDataFile() {
  */
 void MainWindow::populateBulletComboBox() {
     ui->bulletComboBox->clear();
-    for (const Bullet &bullet : bulletDatabase) {
-        QString bulletInfo = QString("%1 %2 %3gr")
-        .arg(bullet.manufacturer, bullet.model)
-        .arg(bullet.weight_gr);
-        ui->bulletComboBox->addItem(bulletInfo, QVariant::fromValue(bullet));
+
+    if (bulletDatabase.empty()) {
+        ui->bulletComboBox->addItem("No bullet profiles loaded");
+        return;
+    }
+
+    for (const auto& bullet : bulletDatabase) {
+        ui->bulletComboBox->addItem(bullet.model);
     }
 }
 
