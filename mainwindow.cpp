@@ -4,7 +4,7 @@
  */
 
 #include <QCoreApplication>
-#include <QFileDialog>
+// #include <QFileDialog>
 #include <QStandardPaths>
 
 #include "mainwindow.h"
